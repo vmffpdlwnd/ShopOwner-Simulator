@@ -79,11 +79,31 @@
             font-weight: bold;
         }
 
+        .message-box {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .message-box.success {
+            background: rgba(81, 207, 102, 0.2);
+            border: 1px solid #51cf66;
+            color: #51cf66;
+            display: block;
+        }
+
+        .message-box.error {
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid #ff6b6b;
+            color: #ff6b6b;
+            display: block;
+        }
+
         .time-indicator {
             display: flex;
-            justify-content: space-around;
-            margin-bottom: 20px;
             gap: 10px;
+            margin-bottom: 20px;
         }
 
         .time-btn {
@@ -96,11 +116,6 @@
             cursor: pointer;
             font-size: 1em;
             transition: all 0.3s;
-        }
-
-        .time-btn.active {
-            background: #ffd700;
-            color: #000;
         }
 
         .time-btn:hover {
@@ -186,7 +201,6 @@
             border: 1px solid #555;
             border-radius: 5px;
             padding: 12px;
-            cursor: pointer;
             transition: all 0.3s;
         }
 
@@ -206,14 +220,7 @@
             font-size: 0.9em;
         }
 
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
         .action-btn {
-            flex: 1;
             padding: 12px 20px;
             background: #ffd700;
             color: #000;
@@ -223,18 +230,13 @@
             font-size: 1em;
             font-weight: bold;
             transition: all 0.3s;
+            width: 100%;
+            margin-top: 15px;
         }
 
         .action-btn:hover {
             background: #ffed4e;
-            transform: scale(1.05);
-        }
-
-        .action-btn:disabled {
-            background: #666;
-            color: #aaa;
-            cursor: not-allowed;
-            transform: scale(1);
+            transform: scale(1.02);
         }
 
         .info-text {
@@ -244,8 +246,33 @@
             margin: 10px 0;
         }
 
-        .hidden {
+        .content-section {
             display: none;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        input[type="number"], input[type="radio"] {
+            cursor: pointer;
+        }
+
+        .recipe-option {
+            background: rgba(60, 60, 60, 0.8);
+            border: 1px solid #555;
+            border-radius: 5px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+
+        .recipe-option label {
+            cursor: pointer;
+            display: block;
+        }
+
+        .recipe-option strong {
+            color: #ffd700;
         }
 
         @@media (max-width: 768px) {
@@ -270,26 +297,34 @@
             <p>자원을 모아 아이템을 제작하고 팔아 부자가 되자!</p>
         </div>
 
+        <!-- 메시지 표시 -->
+        @if (!string.IsNullOrEmpty(Model.Message))
+        {
+            <div class="message-box @Model.MessageType">
+                @Model.Message
+            </div>
+        }
+
         <!-- 게임 상태 -->
         <div class="game-stats">
             <div class="stat-box">
                 <div class="label">시간</div>
-                <div class="value" id="currentTime">아침 08:00</div>
+                <div class="value">아침 08:00</div>
             </div>
             <div class="stat-box">
                 <div class="label">골드</div>
-                <div class="value" id="playerGold">0G</div>
+                <div class="value">@(Model.CurrentUser?.Gold.ToString("N0") ?? "0")G</div>
             </div>
             <div class="stat-box">
                 <div class="label">레벨</div>
-                <div class="value" id="playerLevel">1</div>
+                <div class="value">@(Model.CurrentUser?.Level ?? 1)</div>
             </div>
         </div>
 
-        <!-- 시간 선택 -->
+        <!-- 시간 선택 (비활성화 - 추후 구현) -->
         <div class="time-indicator">
-            <button class="time-btn active" onclick="switchTime('morning', this)">☀️ 아침</button>
-            <button class="time-btn" onclick="switchTime('evening', this)">🌙 저녁</button>
+            <button class="time-btn">☀️ 아침</button>
+            <button class="time-btn">🌙 저녁</button>
         </div>
 
         <!-- 메인 콘텐츠 -->
@@ -297,10 +332,10 @@
             <!-- 왼쪽 패널: 상점 -->
             <div class="panel">
                 <h2>🏪 상점</h2>
-                <p class="info-text">NPC 상점에서 필요한 물품을 구매하세요.<br>상점은 24시간마다 갱신됩니다.</p>
+                <p class="info-text">NPC 상점에서 필요한 물품을 구매하세요.</p>
                 <div class="menu-buttons">
-                    <button class="menu-btn active" onclick="showSection('shop', this)">물품 구매</button>
-                    <button class="menu-btn" onclick="showSection('myShop', this)">내 상점</button>
+                    <button class="menu-btn active" onclick="showSection('shop')">물품 구매</button>
+                    <button class="menu-btn" onclick="showSection('myShop')">내 상점</button>
                 </div>
             </div>
 
@@ -309,11 +344,10 @@
                 <h2>⚔️ 모험</h2>
                 <p class="info-text">던전을 탐험하고 자원을 수집하세요.</p>
                 <div class="menu-buttons">
-                    <button class="menu-btn" onclick="showSection('dungeon', this)">던전 탐험</button>
-                    <button class="menu-btn" onclick="showSection('inventory', this)">인벤토리</button>
-                    <button class="menu-btn" onclick="showSection('crafting', this)">아이템 제작</button>
-                    <button class="menu-btn" onclick="showSection('marketplace', this)">거래소</button>
-                    <button class="menu-btn" onclick="showSection('characters', this)">용병 관리</button>
+                    <button class="menu-btn" onclick="showSection('dungeon')">던전 탐험</button>
+                    <button class="menu-btn" onclick="showSection('inventory')">인벤토리</button>
+                    <button class="menu-btn" onclick="showSection('crafting')">아이템 제작</button>
+                    <button class="menu-btn" onclick="showSection('characters')">용병 관리</button>
                 </div>
             </div>
         </div>
@@ -321,217 +355,181 @@
         <!-- 콘텐츠 영역 -->
         <div class="content-area">
             <!-- 상점 섹션 -->
-            <div id="shop-section" class="content-section">
+            <div id="shop" class="content-section active">
                 <h3>🏪 물품 구매</h3>
                 <p class="info-text">상점 재고 변경: 내일 08:00</p>
-                <div class="item-list" id="shopItems">
-                    <!-- 동적으로 생성됨 -->
-                </div>
+                @if (Model.ShopItems?.Count > 0)
+                {
+                    <div class="item-list">
+                        @foreach (var item in Model.ShopItems)
+                        {
+                            <div class="item-card">
+                                <div class="item-name">@item.Name</div>
+                                <div class="item-price">@item.Price.ToString("N0")G</div>
+                            </div>
+                        }
+                    </div>
+                    <form method="post">
+                        <input type="hidden" name="Action" value="buy_shop" />
+                        <div style="display: flex; gap: 10px;">
+                            <input type="number" name="BuyQuantity" value="1" min="1" style="flex: 1; padding: 8px; background: rgba(50,50,50,0.8); border: 1px solid #666; color: #fff; border-radius: 5px;" />
+                            <button type="submit" class="action-btn" style="flex: 1; margin-top: 0;">구매</button>
+                        </div>
+                    </form>
+                }
+                else
+                {
+                    <p class="info-text">상점이 준비 중입니다.</p>
+                }
             </div>
 
             <!-- 내 상점 섹션 -->
-            <div id="myShop-section" class="content-section hidden">
+            <div id="myShop" class="content-section">
                 <h3>📊 내 상점 현황</h3>
-                <div class="info-text">
-                    <p>어제 판매 수익: <span id="yesterdayRevenue" style="color: #ffd700;">0G</span></p>
-                    <p>용병 급여: <span id="mercenaryWage" style="color: #ff6b6b;">0G</span></p>
-                    <p>총 자산: <span id="totalAsset" style="color: #51cf66;">0G</span></p>
-                </div>
+                @if (Model.CurrentUser != null)
+                {
+                    <div class="info-text">
+                        <p>총 골드: <span style="color: #ffd700;">@Model.CurrentUser.Gold.ToString("N0")G</span></p>
+                        <p>보유 용병: <span style="color: #ffd700;">@(Model.CurrentUser.Characters?.Count ?? 0)명</span></p>
+                        <p>보유 아이템: <span style="color: #ffd700;">@(Model.CurrentUser.Inventory?.Items?.Count ?? 0)개</span></p>
+                    </div>
+                }
             </div>
 
-            <!-- 던전 섹션 -->
-            <div id="dungeon-section" class="content-section hidden">
+            <!-- 던전 탐험 섹션 -->
+            <div id="dungeon" class="content-section">
                 <h3>⚔️ 던전 탐험</h3>
                 <p class="info-text">용병을 선택하고 던전을 탐험하세요.</p>
-                <div class="item-list" id="dungeonList">
-                    <!-- 동적으로 생성됨 -->
-                </div>
-                <div class="action-buttons">
-                    <button class="action-btn" onclick="exploreDungeon()">탐험 시작</button>
-                </div>
+                @if (Model.AvailableDungeons?.Count > 0)
+                {
+                    <div class="item-list">
+                        @foreach (var dungeon in Model.AvailableDungeons)
+                        {
+                            <div class="item-card">
+                                <div class="item-name">@dungeon.Name</div>
+                                <div class="item-price">난이도: @(string.Concat(Enumerable.Repeat("⭐", dungeon.Difficulty)))</div>
+                            </div>
+                        }
+                    </div>
+                    <form method="post">
+                        <input type="hidden" name="Action" value="explore_dungeon" />
+                        <button type="submit" class="action-btn">탐험 시작</button>
+                    </form>
+
+                    @if (Model.LastDungeonResult != null)
+                    {
+                        <hr style="border: none; border-top: 1px solid #666; margin: 15px 0;" />
+                        <h4 style="color: #ffd700; margin-bottom: 10px;">⚔️ 탐험 결과</h4>
+                        <div class="info-text">
+                            <p>던전: @Model.LastDungeonResult.DungeonName</p>
+                            <p>결과: @(Model.LastDungeonResult.Success ? "✓ 성공!" : "✗ 실패!")</p>
+                            <p>목재 +@Model.LastDungeonResult.WoodGained, 철 +@Model.LastDungeonResult.IronGained</p>
+                            <p>골드 +@Model.LastDungeonResult.GoldGained, 경험치 +@Model.LastDungeonResult.ExpGained</p>
+                        </div>
+                    }
+                }
             </div>
 
             <!-- 인벤토리 섹션 -->
-            <div id="inventory-section" class="content-section hidden">
+            <div id="inventory" class="content-section">
                 <h3>🎒 인벤토리</h3>
                 <p class="info-text">보유 자원 및 아이템</p>
-                <div id="inventoryList">
-                    <!-- 동적으로 생성됨 -->
-                </div>
+                @if (Model.CurrentUser?.Inventory != null)
+                {
+                    <div class="info-text">
+                        <p>목재: <span style="color: #ffd700;">@Model.CurrentUser.Inventory.Wood</span>개</p>
+                        <p>철: <span style="color: #ffd700;">@Model.CurrentUser.Inventory.Iron</span>개</p>
+                        <p>석재: <span style="color: #ffd700;">@Model.CurrentUser.Inventory.Stone</span>개</p>
+                        <p>결정: <span style="color: #ffd700;">@Model.CurrentUser.Inventory.Crystal</span>개</p>
+                        <hr style="border: none; border-top: 1px solid #666; margin: 15px 0;" />
+                        <p>아이템 개수: <span style="color: #ffd700;">@(Model.CurrentUser.Inventory.Items?.Count ?? 0)개</span></p>
+                        @if (Model.CurrentUser.Inventory.Items?.Count > 0)
+                        {
+                            @foreach (var item in Model.CurrentUser.Inventory.Items)
+                            {
+                                <p style="margin-left: 10px;">- @item.Name: @(item.Quantity)개</p>
+                            }
+                        }
+                    </div>
+                }
             </div>
 
             <!-- 아이템 제작 섹션 -->
-            <div id="crafting-section" class="content-section hidden">
+            <div id="crafting" class="content-section">
                 <h3>🔨 아이템 제작</h3>
                 <p class="info-text">자원을 조합하여 아이템을 제작하세요.</p>
-                <div id="craftingList">
-                    <!-- 동적으로 생성됨 -->
-                </div>
-            </div>
-
-            <!-- 거래소 섹션 -->
-            <div id="marketplace-section" class="content-section hidden">
-                <h3>💰 거래소</h3>
-                <p class="info-text">플레이어와 아이템을 거래하세요.</p>
-                <div id="marketplaceList">
-                    <!-- 동적으로 생성됨 -->
-                </div>
+                @if (Model.AvailableRecipes?.Count > 0)
+                {
+                    <form method="post">
+                        <input type="hidden" name="Action" value="craft_item" />
+                        @foreach (var recipe in Model.AvailableRecipes)
+                        {
+                            <div class="recipe-option">
+                                <label>
+                                    <input type="radio" name="SelectedRecipeId" value="@recipe.RecipeId" style="margin-right: 8px;" />
+                                    <strong>@recipe.ResultName</strong>
+                                    <div style="color: #aaa; font-size: 0.9em; margin-top: 5px;">
+                                        필요: 목재 @recipe.RequiredWood + 철 @recipe.RequiredIron + 석재 @recipe.RequiredStone
+                                    </div>
+                                    <div style="color: #ffd700; font-size: 0.9em; margin-top: 5px;">
+                                        판매가: @recipe.SellPrice.ToString("N0")G
+                                    </div>
+                                </label>
+                            </div>
+                        }
+                        <button type="submit" class="action-btn">제작하기</button>
+                    </form>
+                }
             </div>
 
             <!-- 용병 관리 섹션 -->
-            <div id="characters-section" class="content-section hidden">
+            <div id="characters" class="content-section">
                 <h3>⚔️ 용병 관리</h3>
-                <p class="info-text">용병을 고용하고 관리하세요.</p>
-                <div id="charactersList">
-                    <!-- 동적으로 생성됨 -->
-                </div>
+                <p class="info-text">보유한 용병들입니다.</p>
+                @if (Model.AvailableCharacters?.Count > 0)
+                {
+                    <div class="item-list">
+                        @foreach (var character in Model.AvailableCharacters)
+                        {
+                            <div class="item-card">
+                                <div class="item-name">@character.Name</div>
+                                <div class="item-price">
+                                    Lv @character.Level | @character.Job
+                                </div>
+                                <div class="item-price" style="margin-top: 5px;">
+                                    ATK: @character.Attack | DEF: @character.Defense
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <form method="post">
+                        <input type="hidden" name="Action" value="hire_character" />
+                        <button type="submit" class="action-btn">새 용병 고용</button>
+                    </form>
+                }
             </div>
         </div>
     </div>
 
     <script>
-        // 게임 상태
-        let gameState = {
-            playerGold: 5000,
-            playerLevel: 1,
-            currentTime: 'morning',
-            inventory: {
-                wood: 10,
-                iron: 5,
-                stone: 3
-            },
-            characters: [],
-            revenue: 0
-        };
-
-        // 초기화
-        function init() {
-            updateUI();
-            loadShopItems();
-            loadDungeonList();
-            loadInventory();
-            loadCraftingList();
-        }
-
-        // UI 업데이트
-        function updateUI() {
-            document.getElementById('currentTime').textContent = gameState.currentTime === 'morning' ? '아침 08:00' : '저녁 20:00';
-            document.getElementById('playerGold').textContent = gameState.playerGold.toLocaleString() + 'G';
-            document.getElementById('playerLevel').textContent = gameState.playerLevel;
-        }
-
-        // 시간 전환
-        function switchTime(time, el) {
-            gameState.currentTime = time;
-            document.querySelectorAll('.time-btn').forEach(btn => btn.classList.remove('active'));
-            if (el) el.classList.add('active');
-            updateUI();
-        }
-
-        // 섹션 표시
-        function showSection(sectionName, el) {
+        function showSection(sectionName) {
+            // 모든 섹션 숨기기
             document.querySelectorAll('.content-section').forEach(section => {
-                section.classList.add('hidden');
+                section.classList.remove('active');
             });
-            document.getElementById(sectionName + '-section').classList.remove('hidden');
 
+            // 선택한 섹션 보이기
+            const section = document.getElementById(sectionName);
+            if (section) {
+                section.classList.add('active');
+            }
+
+            // 메뉴 버튼 스타일 업데이트
             document.querySelectorAll('.menu-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
-            if (el) el.classList.add('active');
+            event.target.classList.add('active');
         }
-
-        // 상점 아이템 로드
-        function loadShopItems() {
-            const shopItems = [
-                { id: 1, name: '초급 전사', price: 1000, type: 'character' },
-                { id: 2, name: '철 (x10)', price: 100, type: 'resource' },
-                { id: 3, name: '포션 (x5)', price: 50, type: 'item' },
-                { id: 4, name: '나무 검', price: 300, type: 'equipment' }
-            ];
-
-            const shopContainer = document.getElementById('shopItems');
-            shopContainer.innerHTML = shopItems.map(item => `
-                <div class="item-card" onclick="buyItem(${item.id})">
-                    <div class="item-name">${item.name}</div>
-                    <div class="item-price">${item.price}G</div>
-                </div>
-            `).join('');
-        }
-
-        // 던전 리스트 로드
-        function loadDungeonList() {
-            const dungeons = [
-                { id: 1, name: '숲', difficulty: '⭐', reward: '목재' },
-                { id: 2, name: '광산', difficulty: '⭐⭐', reward: '철' },
-                { id: 3, name: '동굴', difficulty: '⭐⭐⭐', reward: '석재' }
-            ];
-
-            const dungeonContainer = document.getElementById('dungeonList');
-            dungeonContainer.innerHTML = dungeons.map(dungeon => `
-                <div class="item-card" onclick="selectDungeon(${dungeon.id})">
-                    <div class="item-name">${dungeon.name}</div>
-                    <div class="item-price">난이도: ${dungeon.difficulty}</div>
-                </div>
-            `).join('');
-        }
-
-        // 인벤토리 로드
-        function loadInventory() {
-            const inventoryContainer = document.getElementById('inventoryList');
-            const items = Object.entries(gameState.inventory).map(([key, value]) => ({
-                name: key.charAt(0).toUpperCase() + key.slice(1),
-                count: value
-            }));
-
-            inventoryContainer.innerHTML = items.map(item => `
-                <div class="info-text">
-                    ${item.name}: <span style="color: #ffd700;">${item.count}개</span>
-                </div>
-            `).join('');
-        }
-
-        // 제작 리스트 로드
-        function loadCraftingList() {
-            const recipes = [
-                { id: 1, name: '철 검', recipe: '목재 2 + 철 3', result: '철 검', price: 500 },
-                { id: 2, name: '나무 방패', recipe: '목재 5 + 석재 2', result: '나무 방패', price: 300 }
-            ];
-
-            const craftingContainer = document.getElementById('craftingList');
-            craftingContainer.innerHTML = recipes.map(recipe => `
-                <div class="item-card" onclick="craftItem(${recipe.id})">
-                    <div class="item-name">${recipe.name}</div>
-                    <div class="item-price">${recipe.recipe}</div>
-                </div>
-            `).join('');
-        }
-
-        // 아이템 구매
-        function buyItem(itemId) {
-            alert('아이템 ' + itemId + '를 구매했습니다!');
-            gameState.playerGold -= 100;
-            updateUI();
-        }
-
-        // 던전 탐험
-        function exploreDungeon() {
-            alert('던전을 탐험 중입니다...');
-            gameState.playerGold += 500;
-            gameState.inventory.wood += 5;
-            updateUI();
-            loadInventory();
-        }
-
-        // 아이템 제작
-        function craftItem(itemId) {
-            alert('아이템을 제작했습니다!');
-            gameState.playerGold += 500;
-            updateUI();
-        }
-
-        // 페이지 로드 시 초기화
-        window.onload = init;
     </script>
 </body>
 </html>
