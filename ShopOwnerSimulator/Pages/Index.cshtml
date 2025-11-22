@@ -334,8 +334,8 @@
                 <h2>🏪 상점</h2>
                 <p class="info-text">NPC 상점에서 필요한 물품을 구매하세요.</p>
                 <div class="menu-buttons">
-                    <button class="menu-btn active" onclick="showSection('shop')">물품 구매</button>
-                    <button class="menu-btn" onclick="showSection('myShop')">내 상점</button>
+                    <button class="menu-btn active" onclick="showSection('shop', event)">물품 구매</button>
+                    <button class="menu-btn" onclick="showSection('myShop', event)">내 상점</button>
                 </div>
             </div>
 
@@ -344,10 +344,10 @@
                 <h2>⚔️ 모험</h2>
                 <p class="info-text">던전을 탐험하고 자원을 수집하세요.</p>
                 <div class="menu-buttons">
-                    <button class="menu-btn" onclick="showSection('dungeon')">던전 탐험</button>
-                    <button class="menu-btn" onclick="showSection('inventory')">인벤토리</button>
-                    <button class="menu-btn" onclick="showSection('crafting')">아이템 제작</button>
-                    <button class="menu-btn" onclick="showSection('characters')">용병 관리</button>
+                    <button class="menu-btn" onclick="showSection('dungeon', event)">던전 탐험</button>
+                    <button class="menu-btn" onclick="showSection('inventory', event)">인벤토리</button>
+                    <button class="menu-btn" onclick="showSection('crafting', event)">아이템 제작</button>
+                    <button class="menu-btn" onclick="showSection('characters', event)">용병 관리</button>
                 </div>
             </div>
         </div>
@@ -512,7 +512,7 @@
     </div>
 
     <script>
-        function showSection(sectionName) {
+        function showSection(sectionName, evt) {
             // 모든 섹션 숨기기
             document.querySelectorAll('.content-section').forEach(section => {
                 section.classList.remove('active');
@@ -528,7 +528,11 @@
             document.querySelectorAll('.menu-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
-            event.target.classList.add('active');
+            if (evt && evt.currentTarget) {
+                evt.currentTarget.classList.add('active');
+            } else if (evt && evt.target) {
+                evt.target.classList.add('active');
+            }
         }
     </script>
 </body>
