@@ -9,10 +9,18 @@ public class GameService
 {
     private static User _currentUser;
     private static List<Dungeon> _dungeons;
+    private readonly DataService _dataService;
 
     public GameService()
     {
         _dungeons = Dungeon.GetDefaultDungeons();
+        _dataService = new DataService();
+
+        // 저장된 게임이 있으면 로드
+        if (_currentUser == null && _dataService.HasSavedGame())
+        {
+            _currentUser = _dataService.LoadUser();
+        }
     }
 
     // ==================== 유저 관리 ====================
@@ -37,6 +45,9 @@ public class GameService
 
         // 초급 용병 1명 제공
         _currentUser.Characters.Add(CreateCharacter("초급 전사", CharacterJob.Warrior, 1, 500));
+
+        // 저장
+        _dataService.SaveUser(_currentUser);
 
         return _currentUser;
     }
@@ -146,6 +157,9 @@ public class GameService
             character.GainExperience(result.ExpGained);
         }
 
+        // 저장
+        _dataService.SaveUser(_currentUser);
+
         return result;
     }
 
@@ -196,6 +210,10 @@ public class GameService
         };
 
         _currentUser.Inventory.Items.Add(craftedItem);
+
+        // 저장
+        _dataService.SaveUser(_currentUser);
+
         return true;
     }
 
@@ -278,6 +296,9 @@ public class GameService
                 CreatedAt = DateTime.UtcNow
             });
         }
+
+        // 저장
+        _dataService.SaveUser(_currentUser);
 
         return true;
     }
