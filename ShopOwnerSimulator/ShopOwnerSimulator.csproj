@@ -6,4 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="PlayFabAllSDK" Version="1.205.250718" />
+  </ItemGroup>
+
 </Project>

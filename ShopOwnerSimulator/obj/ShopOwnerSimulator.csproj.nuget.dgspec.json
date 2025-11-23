@@ -49,6 +49,12 @@
       "frameworks": {
         "net9.0": {
           "targetAlias": "net9.0",
+          "dependencies": {
+            "PlayFabAllSDK": {
+              "target": "Package",
+              "version": "[1.205.250718, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",
