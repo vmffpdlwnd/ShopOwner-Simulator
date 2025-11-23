@@ -95,3 +95,9 @@ D:\Github\ShopOwner-Simulator\ShopOwnerSimulator\obj\Debug\net9.0\refint\ShopOwn
 D:\Github\ShopOwner-Simulator\ShopOwnerSimulator\obj\Debug\net9.0\ShopOwnerSimulator.pdb
 D:\Github\ShopOwner-Simulator\ShopOwnerSimulator\obj\Debug\net9.0\ShopOwnerSimulator.genruntimeconfig.cache
 D:\Github\ShopOwner-Simulator\ShopOwnerSimulator\obj\Debug\net9.0\ref\ShopOwnerSimulator.dll
+D:\Github\ShopOwner-Simulator\ShopOwnerSimulator\bin\Debug\net9.0\PlayFabAllSDK.dll
+D:\Github\ShopOwner-Simulator\ShopOwnerSimulator\bin\Debug\net9.0\Polly.dll
+D:\Github\ShopOwner-Simulator\ShopOwnerSimulator\obj\Debug\net9.0\ShopOwnerSimulator.csproj.AssemblyReference.cache
+D:\Github\ShopOwner-Simulator\ShopOwnerSimulator\obj\Debug\net9.0\ShopOwne.84B65DFE.Up2Date
+D:\Github\ShopOwner-Simulator\ShopOwnerSimulator\bin\Debug\net9.0\GameData\playfab_error.json
+D:\Github\ShopOwner-Simulator\ShopOwnerSimulator\bin\Debug\net9.0\GameData\user_data.json
