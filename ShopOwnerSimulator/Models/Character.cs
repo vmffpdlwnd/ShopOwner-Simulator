@@ -1,31 +1,22 @@
 // Models/Character.cs
 public class Character
 {
-    public string CharacterId { get; set; }
-    public string OwnerUserId { get; set; }
-    public string Name { get; set; }
-    public CharacterJob Job { get; set; }
-    public int Level { get; set; }
-    public int Experience { get; set; }
-    public int HP { get; set; }
-    public int MaxHP { get; set; }
-    public int Attack { get; set; }
-    public int Defense { get; set; }
-    public int Speed { get; set; }
-    public long MonthlySalary { get; set; }
-    public bool IsRentable { get; set; }
-    public int TimesRented { get; set; }
-    public double AverageRating { get; set; }
-    public DateTime CreatedAt { get; set; }
-
-    public Character()
-    {
-        CharacterId = Guid.NewGuid().ToString();
-        HP = MaxHP;
-        TimesRented = 0;
-        AverageRating = 5.0;
-        CreatedAt = DateTime.UtcNow;
-    }
+    public string CharacterId { get; set; } = Guid.NewGuid().ToString();
+    public string OwnerUserId { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public CharacterJob Job { get; set; } = CharacterJob.Warrior;
+    public int Level { get; set; } = 1;
+    public int Experience { get; set; } = 0;
+    public int HP { get; set; } = 100;
+    public int MaxHP { get; set; } = 100;
+    public int Attack { get; set; } = 10;
+    public int Defense { get; set; } = 5;
+    public int Speed { get; set; } = 5;
+    public long MonthlySalary { get; set; } = 0;
+    public bool IsRentable { get; set; } = false;
+    public int TimesRented { get; set; } = 0;
+    public double AverageRating { get; set; } = 5.0;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public void TakeDamage(int damage)
     {

@@ -1,10 +1,10 @@
 // Models/Dungeon.cs
 public class Dungeon
 {
-    public string DungeonId { get; set; }
-    public string Name { get; set; }
+    public string DungeonId { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
     public int Difficulty { get; set; }
-    public string MainReward { get; set; }
+    public string MainReward { get; set; } = string.Empty;
     public int Wood { get; set; }
     public int Iron { get; set; }
     public int Stone { get; set; }

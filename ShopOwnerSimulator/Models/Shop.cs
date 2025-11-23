@@ -1,20 +1,12 @@
 // Models/Shop.cs
 public class Shop
 {
-    public string ShopId { get; set; }
-    public string OwnerUserId { get; set; }
-    public string ShopName { get; set; }
-    public List<ShopItem> Items { get; set; }
-    public long TotalRevenue { get; set; }
-    public DateTime LastResetAt { get; set; }
-
-    public Shop()
-    {
-        ShopId = Guid.NewGuid().ToString();
-        Items = new List<ShopItem>();
-        TotalRevenue = 0;
-        LastResetAt = DateTime.UtcNow;
-    }
+    public string ShopId { get; set; } = Guid.NewGuid().ToString();
+    public string OwnerUserId { get; set; } = string.Empty;
+    public string ShopName { get; set; } = string.Empty;
+    public List<ShopItem> Items { get; set; } = new List<ShopItem>();
+    public long TotalRevenue { get; set; } = 0;
+    public DateTime LastResetAt { get; set; } = DateTime.UtcNow;
 
     public void ResetShopIfNeeded()
     {
@@ -27,11 +19,9 @@ public class Shop
 
     private List<ShopItem> GenerateNewItems()
     {
-        // 무작위로 상점 아이템 생성
         var random = new Random();
         var items = new List<ShopItem>();
 
-        // 기본 아이템들
         var possibleItems = new[]
         {
             new ShopItem { Name = "초급 전사", Price = 1000, Type = "Character" },
@@ -42,11 +32,8 @@ public class Shop
             new ShopItem { Name = "초급 궁수", Price = 900, Type = "Character" }
         };
 
-        // 랜덤하게 4개 선택
         for (int i = 0; i < 4; i++)
-        {
             items.Add(possibleItems[random.Next(possibleItems.Length)]);
-        }
 
         return items;
     }
@@ -54,15 +41,9 @@ public class Shop
 
 public class ShopItem
 {
-    public string ItemId { get; set; }
-    public string Name { get; set; }
-    public long Price { get; set; }
-    public string Type { get; set; }
-    public int Stock { get; set; }
-
-    public ShopItem()
-    {
-        ItemId = Guid.NewGuid().ToString();
-        Stock = 100;
-    }
+    public string ItemId { get; set; } = Guid.NewGuid().ToString();
+    public string Name { get; set; } = string.Empty;
+    public long Price { get; set; } = 0;
+    public string Type { get; set; } = string.Empty;
+    public int Stock { get; set; } = 100;
 }

@@ -1,7 +1,7 @@
 // Models/Inventory.cs
 public class Inventory
 {
-    public string UserId { get; set; }
+    public string UserId { get; set; } = string.Empty;
     public int Wood { get; set; }
     public int Iron { get; set; }
     public int Stone { get; set; }

@@ -1,20 +1,19 @@
 // Models/Item.cs
 public class Item
 {
-    public string ItemId { get; set; }
-    public string Name { get; set; }
-    public ItemType Type { get; set; }
-    public int Price { get; set; }
-    public string Description { get; set; }
-    public int Quantity { get; set; }
-    public DateTime CreatedAt { get; set; }
+    public string ItemId { get; set; } = Guid.NewGuid().ToString();
+    public string Name { get; set; } = string.Empty;
+    public ItemType Type { get; set; }       // 기존 enum 사용
+    public long Price { get; set; }
+    public int Quantity { get; set; } = 1;   // 추가
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow; // 추가
 }
 
+// Models/ItemType.cs
 public enum ItemType
 {
+    Material,
     Weapon,
     Armor,
-    Potion,
-    Resource,
-    Material
+    Consumable
 }
