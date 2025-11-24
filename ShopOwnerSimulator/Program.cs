@@ -9,6 +9,7 @@ builder.Services.AddSingleton<DataService>();
 builder.Services.AddSingleton<PlayFabService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<GameService>();
+builder.Services.AddScoped<LambdaService>();
 
 var app = builder.Build();
 
