@@ -1,0 +1,21 @@
+# Ignore build outputs
+**/bin/
+**/obj/
+
+# Visual Studio / IDE
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Optional: published output folder (adjust if you want to track publish artifacts)
+app/
+
+# Logs
+*.log
