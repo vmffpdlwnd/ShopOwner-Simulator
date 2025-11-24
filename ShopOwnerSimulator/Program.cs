@@ -2,10 +2,17 @@ using ShopOwnerSimulator.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Kestrel to listen on port 8080
+// Configure Kestrel to listen on the port provided by the environment (App Runner sets PORT),
+// fallback to 8080 for local runs.
+var portEnv = Environment.GetEnvironmentVariable("PORT");
+var port = 8080;
+if (!string.IsNullOrEmpty(portEnv) && int.TryParse(portEnv, out var p))
+{
+    port = p;
+}
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
-    serverOptions.ListenAnyIP(8080);
+    serverOptions.ListenAnyIP(port);
 });
 
 // Add services to the container.
@@ -27,6 +34,11 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+
+// Expose a lightweight health endpoint before HTTPS redirection so platform health checks
+// (which usually use plain HTTP) aren't redirected to HTTPS and can succeed.
+app.MapGet("/health", () => Results.Text("OK"));
+
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
@@ -34,8 +46,5 @@ app.UseAuthorization();
 
 app.MapRazorPages();
 app.MapControllers();
-
-// Health check endpoint for App Runner
-app.MapGet("/health", () => "OK");
 
 app.Run();
