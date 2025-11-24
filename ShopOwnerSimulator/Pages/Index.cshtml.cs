@@ -8,6 +8,7 @@ public class IndexModel : PageModel
 {
     private readonly ILogger<IndexModel> _logger;
     private readonly GameService _gameService;
+    private readonly LambdaService _lambdaService;
 
     [BindProperty] public User? CurrentUser { get; set; }
     [BindProperty] public string Action { get; set; } = "";
@@ -27,14 +28,30 @@ public class IndexModel : PageModel
     public string Message { get; set; } = "";
     public string MessageType { get; set; } = "info";
 
-    public IndexModel(ILogger<IndexModel> logger, GameService gameService)
+    public IndexModel(ILogger<IndexModel> logger, GameService gameService, LambdaService lambdaService)
     {
         _logger = logger;
         _gameService = gameService;
+        _lambdaService = lambdaService;
     }
 
     public async Task OnGetAsync()
     {
+        // Lambda 테스트
+        try
+        {
+            var result = await _lambdaService.GetUserInfoAsync("player-001");
+            
+            if (result != null && result.Success)
+            {
+                _logger.LogInformation($"Lambda 테스트 - 유저명: {result.Data?.UserName}, 골드: {result.Data?.TotalGold}, 레벨: {result.Data?.Level}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lambda 테스트 중 오류");
+        }
+
         if (_gameService.GetCurrentUser() == null)
         {
             await _gameService.CreateNewGameAsync("Guest Player");
