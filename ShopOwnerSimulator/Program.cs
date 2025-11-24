@@ -35,4 +35,7 @@ app.UseAuthorization();
 app.MapRazorPages();
 app.MapControllers();
 
+// Health check endpoint for App Runner
+app.MapGet("/health", () => "OK");
+
 app.Run();
