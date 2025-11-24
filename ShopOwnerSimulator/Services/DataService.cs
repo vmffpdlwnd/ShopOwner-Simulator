@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.IO;
 using ShopOwnerSimulator.Models;
+using Microsoft.AspNetCore.Hosting;
 
 namespace ShopOwnerSimulator.Services;
 
@@ -12,9 +13,23 @@ public class DataService
     private readonly string _dataPath;
     private readonly string _userFilePath;
 
-    public DataService()
+    // DataService now reads DATA_DIR environment variable (if set) to determine
+    // where runtime data should be stored. If DATA_DIR is not set, it falls back
+    // to the application's content root + /GameData. This makes paths portable
+    // across machines and containers.
+    public DataService(IWebHostEnvironment env)
     {
-        _dataPath = Path.Combine(Directory.GetCurrentDirectory(), DATA_FOLDER);
+        var dataDirEnv = Environment.GetEnvironmentVariable("DATA_DIR");
+        if (!string.IsNullOrEmpty(dataDirEnv))
+        {
+            // If provided path is relative, treat it relative to content root.
+            _dataPath = Path.IsPathRooted(dataDirEnv) ? dataDirEnv : Path.Combine(env.ContentRootPath, dataDirEnv);
+        }
+        else
+        {
+            _dataPath = Path.Combine(env.ContentRootPath, DATA_FOLDER);
+        }
+
         _userFilePath = Path.Combine(_dataPath, USER_FILE_NAME);
 
         if (!Directory.Exists(_dataPath))
