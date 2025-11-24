@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ShopOwnerSimulator")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d226932dd64c1c686b99301edf47839aabb34ca4")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4fbcdb1d0d1048ed2944da4b722e69adfe6a6102")]
 [assembly: System.Reflection.AssemblyProductAttribute("ShopOwnerSimulator")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ShopOwnerSimulator")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

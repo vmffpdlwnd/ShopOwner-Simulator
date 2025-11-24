@@ -1,0 +1,11 @@
+D:\Github\ShopOwner-Simulator\app\ShopOwnerSimulator.exe
+D:\Github\ShopOwner-Simulator\app\appsettings.Development.json
+D:\Github\ShopOwner-Simulator\app\appsettings.json
+D:\Github\ShopOwner-Simulator\app\GameData\playfab_error.json
+D:\Github\ShopOwner-Simulator\app\GameData\user_data.json
+D:\Github\ShopOwner-Simulator\app\ShopOwnerSimulator.dll
+D:\Github\ShopOwner-Simulator\app\ShopOwnerSimulator.deps.json
+D:\Github\ShopOwner-Simulator\app\ShopOwnerSimulator.runtimeconfig.json
+D:\Github\ShopOwner-Simulator\app\ShopOwnerSimulator.pdb
+D:\Github\ShopOwner-Simulator\app\PlayFabAllSDK.dll
+D:\Github\ShopOwner-Simulator\app\Polly.dll

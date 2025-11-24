@@ -1,0 +1,1 @@
+{"code":400,"status":"BadRequest","error":"PlayerCreationDisabled","errorCode":22000,"errorMessage":"Player creations have been disabled for this API."}
