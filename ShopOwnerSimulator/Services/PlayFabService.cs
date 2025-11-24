@@ -7,6 +7,7 @@ using PlayFab;
 using ClientModels = PlayFab.ClientModels;
 using ServerModels = PlayFab.ServerModels;
 using AdminModels = PlayFab.AdminModels;
+using ShopOwnerSimulator.Models;
 
 namespace ShopOwnerSimulator.Services;
 

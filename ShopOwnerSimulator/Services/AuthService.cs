@@ -1,6 +1,7 @@
 // Services/AuthService.cs
 using System.Security.Cryptography;
 using System.Text;
+using ShopOwnerSimulator.Models;
 
 namespace ShopOwnerSimulator.Services;
 

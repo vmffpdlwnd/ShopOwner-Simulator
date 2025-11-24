@@ -1,6 +1,7 @@
 // Services/DataService.cs
 using System.Text.Json;
 using System.IO;
+using ShopOwnerSimulator.Models;
 
 namespace ShopOwnerSimulator.Services;
 

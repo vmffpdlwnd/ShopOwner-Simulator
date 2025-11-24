@@ -1,6 +1,8 @@
-// Models/GameTime.cs
-public enum GameTime
+namespace ShopOwnerSimulator.Models
 {
-    Morning,
-    Evening
+    public enum GameTime
+    {
+        Morning,
+        Evening
+    }
 }
