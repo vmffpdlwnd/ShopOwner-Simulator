@@ -51,7 +51,7 @@ public class AuthService
                     Gold = 5000,
                     CreatedAt = DateTime.UtcNow,
                     LastLoginAt = DateTime.UtcNow,
-                    Inventory = new Inventory { UserId = null },
+                    Inventory = new Inventory { UserId = string.Empty },
                     Characters = new List<Character>(),
                     Shop = new Shop(),
                     IsLoggedIn = true,
