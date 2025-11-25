@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="PlayFabAllSDK" Version="1.205.250718" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
   </ItemGroup>
 
 </Project>

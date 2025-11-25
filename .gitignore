@@ -14,8 +14,11 @@
 .DS_Store
 Thumbs.db
 
-# Optional: published output folder (adjust if you want to track publish artifacts)
+# Published output folder (for Cloudflare Pages deployment)
+publish/
 app/
 
 # Logs
 *.log
+
+.fake
