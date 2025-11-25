@@ -1,16 +1,16 @@
 using PlayFab;
 using PlayFab.ClientModels;
-using ShopOwnerSimulator.Client.Models;
+using ShopOwnerSimulator.Models;
 
-namespace ShopOwnerSimulator.Client.Services;
+namespace ShopOwnerSimulator.Services;
 
-public class PlayFabService
+public class PlayFabClientService
 {
     private readonly string _titleId;
     private string? _sessionTicket;
     private string? _playFabId;
 
-    public PlayFabService(IConfiguration configuration)
+    public PlayFabClientService(IConfiguration configuration)
     {
         _titleId = configuration["PlayFab:TitleId"] ?? string.Empty;
         

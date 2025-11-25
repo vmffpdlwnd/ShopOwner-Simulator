@@ -20,13 +20,13 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x'
+        dotnet-version: '9.0.x'
         
     - name: Restore dependencies
-      run: dotnet restore ShopOwnerSimulator.Client/ShopOwnerSimulator.Client.csproj
+      run: dotnet restore ShopOwnerSimulator/ShopOwnerSimulator.csproj
       
     - name: Build and Publish
-      run: dotnet publish ShopOwnerSimulator.Client/ShopOwnerSimulator.Client.csproj -c Release -o publish
+      run: dotnet publish ShopOwnerSimulator/ShopOwnerSimulator.csproj -c Release -o publish
       
     - name: List publish output
       run: ls -la publish/wwwroot
