@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:  # 수동 실행 허용
 
 jobs:
   build-and-deploy:
@@ -11,10 +12,10 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
         
@@ -24,6 +25,9 @@ jobs:
     - name: Build and Publish
       run: dotnet publish ShopOwnerSimulator.Client/ShopOwnerSimulator.Client.csproj -c Release -o publish
       
+    - name: List publish output
+      run: ls -la publish/wwwroot
+      
     - name: Deploy to Cloudflare Pages
       uses: cloudflare/pages-action@v1
       with:
@@ -32,3 +36,4 @@ jobs:
         projectName: shopowner-simulator
         directory: publish/wwwroot
         gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+        wranglerVersion: '3'
