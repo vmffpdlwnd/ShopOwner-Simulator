@@ -1,7 +1,10 @@
-namespace ShopOwnerSimulator.Services.Interfaces
+// Services/Interfaces/IGameService.cs
+namespace ShopOwnerSimulator.Services;
+
+public interface IGameService
 {
-    public interface IGameService
-    {
-        // Define game-level operations
-    }
+    Task InitializeGameAsync(string playerId);
+    Task<bool> SaveGameAsync();
+    Task<bool> SyncWithServerAsync();
+    Task<Dictionary<string, object>> GetGameStateAsync();
 }
