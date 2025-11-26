@@ -23,6 +23,7 @@ publish_confirm/
 publish_backup/
 static_assets_backup/
 temp_blazor_checks/
+ShopOwnerSimulator/build_diag.txt
 
 # Logs
 *.log
