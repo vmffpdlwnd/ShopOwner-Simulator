@@ -1,0 +1,29 @@
+# wrangler.toml
+name = "shop-owner-simulator"
+main = "index.html"
+type = "javascript"
+account_id = ""
+workers_dev = true
+route = ""
+zone_id = ""
+
+[env.production]
+name = "shop-owner-simulator-prod"
+route = "yourdomain.com/*"
+zone_id = ""
+
+[[triggers.crons]]
+crons = ["0 */6 * * *"]
+
+[build]
+command = "dotnet publish -c Release -o publish"
+cwd = "./"
+watch_paths = ["src/**/*.rs"]
+
+[build.upload]
+format = "service-worker"
+
+[[build.upload.rules]]
+type = "CompiledContentType"
+globs = ["**/*.wasm"]
+fallthrough = true

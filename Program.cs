@@ -1,31 +1,28 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+using System;
+using System.Net.Http;
+using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using ShopOwnerSimulator;
+using ShopOwnerSimulator.Services.Interfaces;
+using ShopOwnerSimulator.Services.Implementations;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebAssemblyHostBuilder.CreateDefault(args);
+builder.RootComponents.Add<App>("#app");
+builder.RootComponents.Add<HeadOutlet>("head::after");
 
-// Add services to the container.
-builder.Services.AddRazorPages();
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
-// Register placeholder services (implementations are stubs)
-builder.Services.AddSingleton<Services.IGameService, Services.GameService>();
-builder.Services.AddSingleton<Services.IMarketService, Services.MarketService>();
-builder.Services.AddSingleton<Services.IMercenaryService, Services.MercenaryService>();
-builder.Services.AddSingleton<Services.IEquipmentService, Services.EquipmentService>();
+// Register service implementations (stubs) using Type-based APIs to avoid ambiguous type conflicts
+builder.Services.AddSingleton(typeof(ShopOwnerSimulator.Services.Interfaces.IGameService), typeof(ShopOwnerSimulator.Services.Implementations.GameService));
+builder.Services.AddSingleton(typeof(ShopOwnerSimulator.Services.Interfaces.IDungeonService), typeof(ShopOwnerSimulator.Services.Implementations.DungeonService));
+builder.Services.AddSingleton(typeof(ShopOwnerSimulator.Services.Interfaces.ICraftingService), typeof(ShopOwnerSimulator.Services.Implementations.CraftingService));
+builder.Services.AddSingleton(typeof(ShopOwnerSimulator.Services.Interfaces.IExchangeService), typeof(ShopOwnerSimulator.Services.Implementations.ExchangeService));
+builder.Services.AddSingleton(typeof(ShopOwnerSimulator.Services.Interfaces.IMercenaryService), typeof(ShopOwnerSimulator.Services.Implementations.MercenaryService));
+builder.Services.AddSingleton(typeof(ShopOwnerSimulator.Services.Interfaces.IInventoryService), typeof(ShopOwnerSimulator.Services.Implementations.InventoryService));
+builder.Services.AddSingleton(typeof(ShopOwnerSimulator.Services.Interfaces.IPersonalShopService), typeof(ShopOwnerSimulator.Services.Implementations.PersonalShopService));
+builder.Services.AddSingleton(typeof(ShopOwnerSimulator.Services.Interfaces.IPlayFabService), typeof(ShopOwnerSimulator.Services.Implementations.PlayFabService));
+builder.Services.AddSingleton(typeof(ShopOwnerSimulator.Services.Interfaces.IStorageService), typeof(ShopOwnerSimulator.Services.Implementations.StorageService));
+builder.Services.AddSingleton(typeof(ShopOwnerSimulator.Services.Interfaces.IStateService), typeof(ShopOwnerSimulator.Services.Implementations.StateService));
+builder.Services.AddSingleton(typeof(ShopOwnerSimulator.Services.Implementations.TimerService));
 
-var app = builder.Build();
-
-if (!app.Environment.IsDevelopment())
-{
-    app.UseExceptionHandler("/Error");
-    app.UseHsts();
-}
-
-app.UseHttpsRedirection();
-app.UseStaticFiles();
-
-app.UseRouting();
-
-app.MapRazorPages();
-
-app.Run();
+await builder.Build().RunAsync();
