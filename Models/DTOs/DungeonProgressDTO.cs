@@ -1,12 +1,13 @@
-// Models/Entities/DungeonProgress.cs
-namespace ShopOwnerSimulator.Models.Entities;
+// Models/DTOs/DungeonProgressDTO.cs
+namespace ShopOwnerSimulator.Models.DTOs;
 
-public class DungeonProgress
+public class DungeonProgressDTO
 {
     public string Id { get; set; }
     public string MercenaryId { get; set; }
     public string DungeonId { get; set; }
     public DateTime StartTime { get; set; }
     public DateTime EndTime { get; set; }
-    public DungeonProgressStatus Status { get; set; }
+    public string Status { get; set; }
+    public TimeSpan RemainingTime { get; set; }
 }

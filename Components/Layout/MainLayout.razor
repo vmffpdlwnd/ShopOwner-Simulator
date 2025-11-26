@@ -1,14 +1,52 @@
+<!-- Components/Layout/MainLayout.razor -->
 @inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@inject GameState GameState
 
-<div class="main-layout">
-    <header>
-        <h1>Shop Owner Simulator</h1>
-        <Components.Layout.Navigation />
-    </header>
-    <main>
-        @Body
-    </main>
-    <footer>
-        <small>&copy; Shop Owner Simulator</small>
+<div class="app-container">
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <h1>Shop Owner Simulator</h1>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <aside class="sidebar">
+            <Navigation />
+        </aside>
+
+        <main class="content">
+            <div class="body">
+                @Body
+            </div>
+        </main>
+
+        <aside class="right-panel">
+            <div class="player-info">
+                <div class="info-card">
+                    <h3>Gold</h3>
+                    <p class="gold-amount">@GameState.Player?.Gold.ToString("N0")</p>
+                </div>
+                <div class="info-card">
+                    <h3>Mercenaries</h3>
+                    <p class="merc-count">@GameState.Mercenaries?.Count</p>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2025 Shop Owner Simulator. All rights reserved.</p>
     </footer>
 </div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        // Load game state on layout initialization
+        if (GameState.Player == null)
+        {
+            await GameState.LoadPlayerAsync();
+        }
+    }
+}

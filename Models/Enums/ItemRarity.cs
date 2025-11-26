@@ -1,1 +1,11 @@
-namespace ShopOwnerSimulator.Models.Enums { public enum ItemRarity { Common, Uncommon, Rare, Epic, Legendary } }
+// Models/Enums/ItemRarity.cs
+namespace ShopOwnerSimulator.Models.Entities;
+
+public enum ItemRarity
+{
+    Common,
+    Uncommon,
+    Rare,
+    Epic,
+    Legendary
+}

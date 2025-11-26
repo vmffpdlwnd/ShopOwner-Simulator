@@ -1,16 +1,16 @@
-// Models/Entities/Transaction.cs
-namespace ShopOwnerSimulator.Models.Entities;
+// Models/DTOs/TransactionDTO.cs
+namespace ShopOwnerSimulator.Models.DTOs;
 
-public class Transaction
+public class TransactionDTO
 {
     public string Id { get; set; }
     public string BuyerId { get; set; }
     public string SellerId { get; set; }
-    public string OrderId { get; set; }
     public string ItemTemplateId { get; set; }
+    public string ItemName { get; set; }
     public int Quantity { get; set; }
     public long UnitPrice { get; set; }
     public long TotalGold { get; set; }
     public DateTime TransactionTime { get; set; }
-    public TransactionType Type { get; set; }
+    public string Type { get; set; }
 }

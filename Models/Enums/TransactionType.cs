@@ -1,1 +1,8 @@
-namespace ShopOwnerSimulator.Models.Enums { public enum TransactionType { Buy, Sell, Transfer } }
+// Models/Enums/TransactionType.cs
+namespace ShopOwnerSimulator.Models.Entities;
+
+public enum TransactionType
+{
+    PersonalShop,
+    Exchange
+}

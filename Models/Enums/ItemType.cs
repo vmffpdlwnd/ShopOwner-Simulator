@@ -1,1 +1,9 @@
-namespace ShopOwnerSimulator.Models.Enums { public enum ItemType { None, Weapon, Armor, Consumable } }
+// Models/Enums/ItemType.cs
+namespace ShopOwnerSimulator.Models.Entities;
+
+public enum ItemType
+{
+    Material,
+    Equipment,
+    Consumable
+}
