@@ -1,5 +1,3 @@
-
-# ShopOwnerSimulator.csproj
 <Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
   <PropertyGroup>
