@@ -27,9 +27,12 @@ jobs:
         run: dotnet build -c Release --no-restore
       
       - name: Publish
+        # NOTE: Do NOT inject sensitive secrets (like PlayFab secret keys) into a client build
+        # that will be served to users. PlayFab SecretKey should never be embedded in a
+        # client-side Blazor WebAssembly build. If server-side features need the secret,
+        # keep it only on the server or use serverless/worker endpoints.
         env:
-          PLAYFAB_TITLE_ID: ${{ secrets.PLAYFAB_TITLE_ID }}
-          PLAYFAB_SECRET_KEY: ${{ secrets.PLAYFAB_SECRET_KEY }}
+          PLAYFAB_TITLE_ID: ${{ secrets.PLAYFAB_TITLE_ID }} # TitleId is not secret and can be provided if needed
         run: dotnet publish -c Release -o publish
       
       - name: Upload to Cloudflare Pages
