@@ -1,4 +1,3 @@
-# wwwroot/js/interop.js
 window.ShopOwnerSimulator = {
     copyToClipboard: async (text) => {
         try {
