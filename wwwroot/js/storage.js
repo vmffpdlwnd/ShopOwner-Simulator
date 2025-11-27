@@ -1,4 +1,3 @@
-# wwwroot/js/storage.js
 class StorageManager {
     static setItem(key, value) {
         try {

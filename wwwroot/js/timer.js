@@ -1,4 +1,3 @@
-# wwwroot/js/timer.js
 class TimerManager {
     constructor() {
         this.timers = new Map();
