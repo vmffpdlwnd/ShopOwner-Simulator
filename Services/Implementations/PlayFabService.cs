@@ -1,6 +1,7 @@
 // Services/Implementations/PlayFabService.cs
 using System.Text;
 using System.Text.Json;
+using System.Collections.Generic;
 using ShopOwnerSimulator.Models.Entities;
 
 namespace ShopOwnerSimulator.Services.Implementations;
@@ -8,22 +9,40 @@ namespace ShopOwnerSimulator.Services.Implementations;
 public class PlayFabService : IPlayFabService
 {
     private readonly HttpClient _httpClient;
-    private readonly string _titleId;
-    private readonly string _secretKey;
-    private const string PlayFabApiUrl = "https://yourtitleid.playfabapi.com";
+    private readonly string? _titleId;
+    private readonly string? _secretKey;
+    private readonly bool _enabled;
 
-    public PlayFabService(string titleId, string secretKey)
+    public PlayFabService(string? titleId, string? secretKey)
     {
         _titleId = titleId;
         _secretKey = secretKey;
         _httpClient = new HttpClient();
+
+        // Consider PlayFab disabled when configuration contains placeholders or is empty
+        _enabled = !string.IsNullOrWhiteSpace(_titleId)
+                   && !string.IsNullOrWhiteSpace(_secretKey)
+                   && !_titleId!.Contains("${")
+                   && !_titleId!.Contains("your");
+
+        if (!_enabled)
+        {
+            Console.Error.WriteLine("PlayFabService: PlayFab disabled due to missing or placeholder configuration.");
+        }
     }
 
     private async Task<T> CallPlayFabApiAsync<T>(string functionName, object payload)
     {
         try
         {
-            var url = $"{PlayFabApiUrl}/Server/{functionName}";
+            if (!_enabled)
+            {
+                Console.Error.WriteLine($"PlayFabService: Skipping API call '{functionName}' because PlayFab is disabled.");
+                return default!;
+            }
+
+            var apiRoot = $"https://{_titleId}.playfabapi.com";
+            var url = $"{apiRoot}/Server/{functionName}";
             var content = new StringContent(
                 JsonSerializer.Serialize(payload),
                 Encoding.UTF8,
@@ -53,6 +72,22 @@ public class PlayFabService : IPlayFabService
 
     public async Task<Player> GetPlayerAsync(string playerId)
     {
+        if (!_enabled)
+        {
+            // Return a local stub player for offline/local development
+            return await Task.FromResult(new Player
+            {
+                Id = string.IsNullOrWhiteSpace(playerId) ? Guid.NewGuid().ToString() : playerId,
+                Username = "LocalPlayer",
+                Level = 1,
+                Experience = 0,
+                Gold = 1000,
+                Crystal = 0,
+                CreatedAt = DateTime.UtcNow,
+                LastLoginAt = DateTime.UtcNow
+            });
+        }
+
         var response = await CallPlayFabApiAsync<Player>("GetUserData", new { PlayFabId = playerId });
         return response ?? throw new Exception("Player not found");
     }
@@ -64,6 +99,20 @@ public class PlayFabService : IPlayFabService
             DisplayName = username,
             TitleId = _titleId
         };
+        if (!_enabled)
+        {
+            return await Task.FromResult(new Player
+            {
+                Id = Guid.NewGuid().ToString(),
+                Username = username,
+                Level = 1,
+                Experience = 0,
+                Gold = 1000,
+                Crystal = 0,
+                CreatedAt = DateTime.UtcNow,
+                LastLoginAt = DateTime.UtcNow
+            });
+        }
 
         var response = await CallPlayFabApiAsync<Player>("CreateOpenIdConnection", payload);
         return response;
@@ -71,6 +120,9 @@ public class PlayFabService : IPlayFabService
 
     public async Task<bool> UpdatePlayerAsync(Player player)
     {
+        if (!_enabled)
+            return await Task.FromResult(true);
+
         var payload = new
         {
             PlayFabId = player.Id,
@@ -89,6 +141,9 @@ public class PlayFabService : IPlayFabService
 
     public async Task<bool> UpdatePlayerGoldAsync(string playerId, long goldAmount)
     {
+        if (!_enabled)
+            return await Task.FromResult(true);
+
         var payload = new
         {
             PlayFabId = playerId,
@@ -101,13 +156,21 @@ public class PlayFabService : IPlayFabService
 
         public async Task<List<Mercenary>> GetMercenariesAsync(string playerId)
     {
-        var payload = new { PlayFabId = playerId };
-        var response = await CallPlayFabApiAsync<List<Mercenary>>("GetUserData", payload);
-        return response ?? new List<Mercenary>();
+            if (!_enabled)
+            {
+                return await Task.FromResult(new List<Mercenary>());
+            }
+
+            var payload = new { PlayFabId = playerId };
+            var response = await CallPlayFabApiAsync<List<Mercenary>>("GetUserData", payload);
+            return response ?? new List<Mercenary>();
     }
 
     public async Task<bool> UpdateMercenaryAsync(Mercenary mercenary)
     {
+        if (!_enabled)
+            return await Task.FromResult(true);
+
         var payload = new
         {
             PlayFabId = mercenary.PlayerId,
@@ -126,6 +189,11 @@ public class PlayFabService : IPlayFabService
 
     public async Task<List<InventoryItem>> GetInventoryAsync(string playerId)
     {
+        if (!_enabled)
+        {
+            return await Task.FromResult(new List<InventoryItem>());
+        }
+
         var payload = new { PlayFabId = playerId };
         var response = await CallPlayFabApiAsync<List<InventoryItem>>("GetUserInventory", payload);
         return response ?? new List<InventoryItem>();
@@ -133,6 +201,9 @@ public class PlayFabService : IPlayFabService
 
     public async Task<bool> UpdateInventoryAsync(string playerId, InventoryItem item)
     {
+        if (!_enabled)
+            return await Task.FromResult(true);
+
         var payload = new
         {
             PlayFabId = playerId,
