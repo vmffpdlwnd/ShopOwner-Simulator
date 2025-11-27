@@ -1,3 +1,405 @@
 @page "/mining"
-<h1>Mining</h1>
-<p>Placeholder mining page.</p>
+@implements IAsyncDisposable
+@using ShopOwnerSimulator.Services
+@using ShopOwnerSimulator.Models.DTOs
+@using ShopOwnerSimulator.State
+@inject GameState GameState
+@inject IDungeonService DungeonService
+@inject ITimerService TimerService
+
+<PageTitle>Mining - Shop Owner Simulator</PageTitle>
+
+<div class="mining-container">
+    <h1>Mining Management</h1>
+
+    <div class="mining-content">
+        <!-- Mercenary List -->
+        <div class="mercenary-panel">
+            <h2>Available Mercenaries</h2>
+            <div class="merc-list">
+                @if (GameState.Mercenaries != null && GameState.Mercenaries.Count > 0)
+                {
+                    @foreach (var merc in GameState.Mercenaries)
+                    {
+                        <div class="merc-card @(merc.CurrentDungeonId != null ? "mining" : "")">
+                            <div class="merc-header">
+                                <h3>@merc.Name</h3>
+                                <span class="level">Level @merc.Level</span>
+                            </div>
+
+                            <div class="merc-stats">
+                                <div class="stat">
+                                    <span>ATK</span>
+                                    <span class="value">@merc.Stats.Attack</span>
+                                </div>
+                                <div class="stat">
+                                    <span>DEF</span>
+                                    <span class="value">@merc.Stats.Defense</span>
+                                </div>
+                                <div class="stat">
+                                    <span>SPD</span>
+                                    <span class="value">@merc.Stats.Speed</span>
+                                </div>
+                            </div>
+
+                            @if (merc.CurrentDungeonId != null)
+                            {
+                                <div class="merc-status">
+                                    <span class="badge mining-badge">Mining</span>
+                                    <Timer EndTime="merc.DungeonEndTime" />
+                                </div>
+                                <button class="btn btn-danger" @onclick="() => AbandonDungeon(merc.Id)">
+                                    Abandon
+                                </button>
+                            }
+                            else
+                            {
+                                <div class="merc-actions">
+                                    <select @onchange="e => SelectedDungeonId = e.Value.ToString()" class="form-control">
+                                        <option value="">Select Dungeon</option>
+                                        @foreach (var dungeon in Dungeons)
+                                        {
+                                            <option value="@dungeon.Id">@dungeon.Name (Lv @dungeon.Level)</option>
+                                        }
+                                    </select>
+                                    <button class="btn btn-primary" 
+                                        @onclick="() => StartDungeon(merc.Id)"
+                                        disabled="@string.IsNullOrEmpty(SelectedDungeonId)">
+                                        Start Mining
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="empty">No mercenaries available. Hire one in the Tavern.</p>
+                }
+            </div>
+        </div>
+
+        <!-- Dungeon Map -->
+        <div class="dungeon-panel">
+            <h2>Dungeons</h2>
+            <div class="dungeon-list">
+                @foreach (var dungeon in Dungeons)
+                {
+                    <div class="dungeon-card">
+                        <h3>@dungeon.Name</h3>
+                        <div class="dungeon-info">
+                            <div class="info-row">
+                                <span>Level Requirement</span>
+                                <span class="value">@dungeon.Level</span>
+                            </div>
+                            <div class="info-row">
+                                <span>Base Time</span>
+                                <span class="value">@dungeon.BaseRewardTime seconds</span>
+                            </div>
+                            <div class="info-row">
+                                <span>Rewards</span>
+                                <span class="value">Materials + Rare Items</span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .mining-container {
+        padding: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .mining-container h1 {
+        margin-bottom: 2rem;
+        font-size: 2rem;
+        color: #333;
+    }
+
+    .mining-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+    }
+
+    .mercenary-panel,
+    .dungeon-panel {
+        background: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .mercenary-panel h2,
+    .dungeon-panel h2 {
+        margin: 0 0 1.5rem 0;
+        font-size: 1.25rem;
+        color: #333;
+    }
+
+    .merc-list,
+    .dungeon-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .merc-card {
+        border: 2px solid #eee;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        transition: all 0.2s;
+    }
+
+    .merc-card:hover {
+        border-color: #007bff;
+        box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+    }
+
+    .merc-card.mining {
+        border-color: #ffc107;
+        background: rgba(255, 193, 7, 0.05);
+    }
+
+    .merc-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .merc-header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        color: #333;
+    }
+
+    .level {
+        background: #007bff;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .merc-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .stat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0.75rem;
+        background: #f8f9fa;
+        border-radius: 0.375rem;
+    }
+
+    .stat span:first-child {
+        font-size: 0.75rem;
+        color: #666;
+        font-weight: 600;
+    }
+
+    .stat .value {
+        font-size: 1.25rem;
+        font-weight: bold;
+        color: #007bff;
+        margin-top: 0.25rem;
+    }
+
+    .merc-status {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .badge {
+        padding: 0.5rem;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .mining-badge {
+        background: #ffc107;
+        color: #333;
+    }
+
+    .merc-actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .form-control,
+    .btn {
+        padding: 0.5rem 1rem;
+        border: 1px solid #ddd;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .form-control {
+        flex: 1;
+        background: white;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+    }
+
+    .btn {
+        border: none;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .btn-primary {
+        background: #007bff;
+        color: white;
+        flex: 1;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        background: #0056b3;
+    }
+
+    .btn-primary:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+        width: 100%;
+    }
+
+    .btn-danger:hover {
+        background: #c82333;
+    }
+
+    .dungeon-card {
+        border: 1px solid #eee;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        background: #f8f9fa;
+    }
+
+    .dungeon-card h3 {
+        margin: 0 0 1rem 0;
+        font-size: 1rem;
+        color: #333;
+    }
+
+    .dungeon-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.875rem;
+    }
+
+    .info-row .value {
+        font-weight: 600;
+        color: #007bff;
+    }
+
+    .empty {
+        color: #999;
+        text-align: center;
+        padding: 2rem 1rem;
+    }
+
+    @media (max-width: 1024px) {
+        .mining-content {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+@code {
+    private List<dynamic> Dungeons = new();
+    private string SelectedDungeonId = "";
+    private bool IsLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        GameState.OnStateChanged += StateHasChanged;
+        await LoadDungeons();
+    }
+
+    private async Task LoadDungeons()
+    {
+        try
+        {
+            Dungeons = await DungeonService.GetAvailableDungeonsAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error loading dungeons: {ex.Message}");
+        }
+    }
+
+    private async Task StartDungeon(string mercenaryId)
+    {
+        if (string.IsNullOrEmpty(SelectedDungeonId))
+            return;
+
+        IsLoading = true;
+        try
+        {
+            var request = new DungeonStartRequest 
+            { 
+                MercenaryId = mercenaryId, 
+                DungeonId = SelectedDungeonId 
+            };
+            
+            await DungeonService.StartDungeonAsync(request);
+            SelectedDungeonId = "";
+            await GameState.LoadGameStateAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error starting dungeon: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task AbandonDungeon(string mercenaryId)
+    {
+        var merc = GameState.Mercenaries.FirstOrDefault(m => m.Id == mercenaryId);
+        if (merc?.CurrentDungeonId != null)
+        {
+            // Implementation for abandoning dungeon
+            await GameState.LoadGameStateAsync();
+        }
+    }
+
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        GameState.OnStateChanged -= StateHasChanged;
+    }
+}

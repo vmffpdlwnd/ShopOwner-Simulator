@@ -1,3 +1,458 @@
 @page "/inventory"
-<h1>Inventory</h1>
-<p>Placeholder inventory page.</p>
+@implements IAsyncDisposable
+@using ShopOwnerSimulator.Services
+@using ShopOwnerSimulator.State
+@inject GameState GameState
+
+<PageTitle>Inventory - Shop Owner Simulator</PageTitle>
+
+<div class="inventory-container">
+    <h1>Inventory</h1>
+
+    <div class="inventory-tabs">
+        <button class="tab @(CurrentTab == "items" ? "active" : "")" @onclick="() => CurrentTab = "items">
+            📦 Items
+        </button>
+        <button class="tab @(CurrentTab == "equipment" ? "active" : "")" @onclick="() => CurrentTab = "equipment">
+            ⚔️ Equipment
+        </button>
+    </div>
+
+    <div class="inventory-content">
+        @if (CurrentTab == "items")
+        {
+            <div class="items-grid">
+                <h2>Materials & Items</h2>
+                @if (GameState.Inventory != null && GameState.Inventory.Count > 0)
+                {
+                    @foreach (var item in GameState.Inventory.Where(i => !i.IsEquipped))
+                    {
+                        <div class="inventory-card">
+                            <div class="card-header">
+                                <h3>@item.ItemTemplateId</h3>
+                                <span class="qty-badge">x@item.Quantity</span>
+                            </div>
+                            <div class="card-content">
+                                <div class="item-stat">
+                                    <span class="label">Item ID</span>
+                                    <span class="value">@item.Id</span>
+                                </div>
+                                <div class="item-stat">
+                                    <span class="label">Status</span>
+                                    <span class="value">Available</span>
+                                </div>
+                            </div>
+                            <div class="card-actions">
+                                <button class="btn btn-sm btn-secondary">
+                                    View Details
+                                </button>
+                                <button class="btn btn-sm btn-primary">
+                                    Sell
+                                </button>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="empty-state">No items in inventory</p>
+                }
+            </div>
+        }
+        else if (CurrentTab == "equipment")
+        {
+            <div class="equipment-section">
+                <h2>Equipped Equipment</h2>
+                <div class="equipment-grid">
+                    @if (GameState.Inventory != null && GameState.Inventory.Any(i => i.IsEquipped))
+                    {
+                        @foreach (var item in GameState.Inventory.Where(i => i.IsEquipped))
+                        {
+                            <div class="equipment-card">
+                                <div class="equipment-header">
+                                    <span class="equipped-badge">✓ Equipped</span>
+                                    <h3>@item.ItemTemplateId</h3>
+                                </div>
+                                <div class="equipment-info">
+                                    <div class="info-row">
+                                        <span class="label">Equipped to</span>
+                                        <span class="value">@item.EquippedMercenaryId</span>
+                                    </div>
+                                </div>
+                                <button class="btn btn-danger w-100">
+                                    Unequip
+                                </button>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="empty-state">No equipped items</p>
+                    }
+                </div>
+
+                <h2 style="margin-top: 2rem;">Unequipped Items</h2>
+                <div class="equipment-grid">
+                    @if (GameState.Inventory != null && GameState.Inventory.Any(i => !i.IsEquipped && i.ItemTemplateId.Contains("equipment")))
+                    {
+                        @foreach (var item in GameState.Inventory.Where(i => !i.IsEquipped && i.ItemTemplateId.Contains("equipment")))
+                        {
+                            <div class="equipment-card unequipped">
+                                <div class="equipment-header">
+                                    <h3>@item.ItemTemplateId</h3>
+                                    <span class="qty-badge">x@item.Quantity</span>
+                                </div>
+                                <button class="btn btn-primary w-100">
+                                    Equip to Mercenary
+                                </button>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="empty-state">No unequipped equipment</p>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Inventory Summary -->
+    <div class="inventory-summary">
+        <h2>Summary</h2>
+        <div class="summary-grid">
+            <div class="summary-card">
+                <span class="label">Total Items</span>
+                <span class="value">@GameState.Inventory?.Count ?? 0</span>
+            </div>
+            <div class="summary-card">
+                <span class="label">Total Quantity</span>
+                <span class="value">@(GameState.Inventory?.Sum(i => i.Quantity) ?? 0)</span>
+            </div>
+            <div class="summary-card">
+                <span class="label">Equipped Items</span>
+                <span class="value">@(GameState.Inventory?.Count(i => i.IsEquipped) ?? 0)</span>
+            </div>
+            <div class="summary-card">
+                <span class="label">Available Items</span>
+                <span class="value">@(GameState.Inventory?.Count(i => !i.IsEquipped) ?? 0)</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .inventory-container {
+        padding: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .inventory-container h1 {
+        margin-bottom: 2rem;
+        font-size: 2rem;
+        color: #333;
+    }
+
+    .inventory-tabs {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        border-bottom: 2px solid #eee;
+    }
+
+    .tab {
+        padding: 1rem 1.5rem;
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
+        cursor: pointer;
+        font-weight: 600;
+        color: #666;
+        transition: all 0.2s;
+    }
+
+    .tab:hover {
+        color: #333;
+    }
+
+    .tab.active {
+        color: #007bff;
+        border-bottom-color: #007bff;
+    }
+
+    .inventory-content {
+        background: white;
+        border-radius: 0.75rem;
+        padding: 2rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+
+    .inventory-content h2 {
+        margin: 0 0 1.5rem 0;
+        font-size: 1.25rem;
+        color: #333;
+    }
+
+    .items-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .inventory-card {
+        border: 1px solid #eee;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        transition: all 0.2s;
+    }
+
+    .inventory-card:hover {
+        border-color: #007bff;
+        box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .card-header h3 {
+        margin: 0;
+        font-size: 1rem;
+    }
+
+    .qty-badge {
+        background: rgba(255, 255, 255, 0.3);
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .card-content {
+        padding: 1rem;
+    }
+
+    .item-stat {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 0.875rem;
+    }
+
+    .item-stat:last-child {
+        border-bottom: none;
+    }
+
+    .label {
+        color: #666;
+    }
+
+    .value {
+        font-weight: 600;
+        color: #333;
+    }
+
+    .card-actions {
+        display: flex;
+        gap: 0.5rem;
+        padding: 1rem;
+        background: #f8f9fa;
+    }
+
+    .btn {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-sm {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.75rem;
+        flex: 1;
+    }
+
+    .btn-primary {
+        background: #007bff;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #0056b3;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #c82333;
+    }
+
+    .w-100 {
+        width: 100%;
+    }
+
+    .equipment-section {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .equipment-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .equipment-card {
+        border: 2px solid #ddd;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        background: white;
+        transition: all 0.2s;
+    }
+
+    .equipment-card:hover {
+        border-color: #007bff;
+        box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+    }
+
+    .equipment-card.unequipped {
+        border-color: #ddd;
+    }
+
+    .equipment-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .equipment-header h3 {
+        margin: 0;
+        font-size: 1rem;
+        color: #333;
+    }
+
+    .equipped-badge {
+        background: #28a745;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .equipment-info {
+        margin-bottom: 1rem;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.875rem;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .empty-state {
+        grid-column: 1 / -1;
+        text-align: center;
+        color: #999;
+        padding: 2rem;
+    }
+
+    .inventory-summary {
+        background: white;
+        border-radius: 0.75rem;
+        padding: 2rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .inventory-summary h2 {
+        margin: 0 0 1.5rem 0;
+        font-size: 1.25rem;
+        color: #333;
+    }
+
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .summary-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 0.5rem;
+    }
+
+    .summary-card .label {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 0.875rem;
+    }
+
+    .summary-card .value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: white;
+    }
+
+    @media (max-width: 768px) {
+        .items-grid,
+        .equipment-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .inventory-tabs {
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 0.75rem 1rem;
+        }
+    }
+</style>
+
+@code {
+    private string CurrentTab = "items";
+
+    protected override async Task OnInitializedAsync()
+    {
+        GameState.OnStateChanged += StateHasChanged;
+        await base.OnInitializedAsync();
+    }
+
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        GameState.OnStateChanged -= StateHasChanged;
+    }
+}

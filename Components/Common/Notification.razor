@@ -1,2 +1,214 @@
-<div class="notification">@Message</div>
-@code { [Parameter] public string Message { get; set; } }
+@foreach (var notification in Notifications)
+{
+    <div class="notification @($"notification-{notification.Type}")" 
+         @key="notification.Id"
+         style="animation: slideIn 0.3s ease-out">
+        <div class="notification-content">
+            <span class="notification-icon">@GetIcon(notification.Type)</span>
+            <div class="notification-text">
+                <div class="notification-title">@notification.Title</div>
+                @if (!string.IsNullOrEmpty(notification.Message))
+                {
+                    <div class="notification-message">@notification.Message</div>
+                }
+            </div>
+        </div>
+        <button class="close-btn" @onclick="() => Close(notification.Id)">×</button>
+    </div>
+}
+
+@code {
+    private List<NotificationItem> Notifications { get; set; } = new();
+
+    public class NotificationItem
+    {
+        public string Id { get; set; }
+        public string Type { get; set; }
+        public string Title { get; set; }
+        public string Message { get; set; }
+        public int Duration { get; set; } = 3000;
+    }
+
+    public void Show(string type, string title, string message = "", int duration = 3000)
+    {
+        var id = Guid.NewGuid().ToString();
+        Notifications.Add(new NotificationItem
+        {
+            Id = id,
+            Type = type,
+            Title = title,
+            Message = message,
+            Duration = duration
+        });
+
+        StateHasChanged();
+
+        if (duration > 0)
+        {
+            _ = Task.Delay(duration).ContinueWith(_ => Close(id));
+        }
+    }
+
+    public void ShowSuccess(string title, string message = "")
+    {
+        Show("success", title, message);
+    }
+
+    public void ShowError(string title, string message = "")
+    {
+        Show("error", title, message, 5000);
+    }
+
+    public void ShowWarning(string title, string message = "")
+    {
+        Show("warning", title, message);
+    }
+
+    public void ShowInfo(string title, string message = "")
+    {
+        Show("info", title, message);
+    }
+
+    private void Close(string id)
+    {
+        Notifications.RemoveAll(n => n.Id == id);
+        StateHasChanged();
+    }
+
+    private string GetIcon(string type) => type switch
+    {
+        "success" => "✓",
+        "error" => "✕",
+        "warning" => "⚠",
+        "info" => "ℹ",
+        _ => "●"
+    };
+}
+
+<style>
+    :host {
+        --notification-success-bg: #d4edda;
+        --notification-success-text: #155724;
+        --notification-success-border: #c3e6cb;
+        
+        --notification-error-bg: #f8d7da;
+        --notification-error-text: #721c24;
+        --notification-error-border: #f5c6cb;
+        
+        --notification-warning-bg: #fff3cd;
+        --notification-warning-text: #856404;
+        --notification-warning-border: #ffeeba;
+        
+        --notification-info-bg: #d1ecf1;
+        --notification-info-text: #0c5460;
+        --notification-info-border: #bee5eb;
+    }
+
+    .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9998;
+        min-width: 300px;
+        max-width: 500px;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        border-left: 4px solid;
+        display: flex;
+        gap: 1rem;
+        align-items: flex-start;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        animation: slideIn 0.3s ease-out;
+    }
+
+    .notification-success {
+        background: var(--notification-success-bg);
+        color: var(--notification-success-text);
+        border-left-color: #28a745;
+    }
+
+    .notification-error {
+        background: var(--notification-error-bg);
+        color: var(--notification-error-text);
+        border-left-color: #dc3545;
+    }
+
+    .notification-warning {
+        background: var(--notification-warning-bg);
+        color: var(--notification-warning-text);
+        border-left-color: #ffc107;
+    }
+
+    .notification-info {
+        background: var(--notification-info-bg);
+        color: var(--notification-info-text);
+        border-left-color: #17a2b8;
+    }
+
+    .notification-content {
+        display: flex;
+        gap: 1rem;
+        align-items: flex-start;
+        flex: 1;
+    }
+
+    .notification-icon {
+        font-weight: bold;
+        font-size: 1.2rem;
+        min-width: 24px;
+        text-align: center;
+    }
+
+    .notification-text {
+        flex: 1;
+    }
+
+    .notification-title {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .notification-message {
+        font-size: 0.875rem;
+        opacity: 0.9;
+    }
+
+    .close-btn {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: inherit;
+        opacity: 0.7;
+        padding: 0;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.2s;
+    }
+
+    .close-btn:hover {
+        opacity: 1;
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @media (max-width: 600px) {
+        .notification {
+            right: 10px;
+            left: 10px;
+            min-width: unset;
+        }
+    }
+</style>

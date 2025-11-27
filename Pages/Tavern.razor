@@ -1,3 +1,315 @@
 @page "/tavern"
-<h1>Tavern</h1>
-<p>Placeholder tavern page.</p>
+@implements IAsyncDisposable
+@using ShopOwnerSimulator.Services
+@using ShopOwnerSimulator.State
+@inject GameState GameState
+@inject IMercenaryService MercenaryService
+
+<PageTitle>Tavern - Shop Owner Simulator</PageTitle>
+
+<div class="tavern-container">
+    <h1>The Tavern</h1>
+    <p class="subtitle">Hire powerful mercenaries to work for you</p>
+
+    <div class="tavern-content">
+        <div class="tavern-info">
+            <div class="info-card">
+                <h2>Hiring Information</h2>
+                <div class="info-section">
+                    <h3>Mercenary Base</h3>
+                    <div class="info-text">
+                        <p>A mercenary with full equipment and experience makes for an excellent dungeon explorer.</p>
+                        <ul>
+                            <li>Starting Level: 1</li>
+                            <li>Starting Stats: ATK 10, DEF 5, SPD 10</li>
+                            <li>Equipment Slots: 3</li>
+                            <li>Growth Potential: Unlimited</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <h3>Your Mercenaries</h3>
+                    <div class="mercs-overview">
+                        <div class="overview-stat">
+                            <span class="label">Total Hired</span>
+                            <span class="value">@(GameState.Mercenaries?.Count ?? 0)</span>
+                        </div>
+                        <div class="overview-stat">
+                            <span class="label">Active</span>
+                            <span class="value">@(GameState.Mercenaries?.Count(m => m.IsActive) ?? 0)</span>
+                        </div>
+                        <div class="overview-stat">
+                            <span class="label">Average Level</span>
+                            <span class="value">@(GameState.Mercenaries?.Any() == true ? (GameState.Mercenaries.Average(m => m.Level)).ToString("F1") : "0")</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="hire-section">
+            <div class="hire-card">
+                <h2>Hire New Mercenary</h2>
+                <div class="hire-details">
+                    <div class="cost-display">
+                        <span class="cost-label">Hiring Cost</span>
+                        <span class="cost-amount">1,000 G</span>
+                    </div>
+
+                    <div class="your-gold">
+                        <span class="gold-label">Your Gold</span>
+                        <span class="gold-amount">@(GameState.Player?.Gold ?? 0)</span>
+                    </div>
+
+                    <div class="hire-benefit">
+                        <h3>What You Get</h3>
+                        <ul class="benefit-list">
+                            <li>✓ Level 1 Mercenary</li>
+                            <li>✓ 3 Equipment Slots</li>
+                            <li>✓ Access to all Dungeons</li>
+                            <li>✓ Growth through Mining</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <button class="btn btn-hire" 
+                    @onclick="HireMercenary"
+                    disabled="@((GameState.Player?.Gold ?? 0) < 1000 || IsHiring)">
+                    @(IsHiring ? "Hiring..." : "Hire Mercenary (1000 G)")
+                </button>
+
+                @if ((GameState.Player?.Gold ?? 0) < 1000)
+                {
+                    <p class="warning">Insufficient gold. Need @(1000 - (GameState.Player?.Gold ?? 0)) more G</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .tavern-container {
+        padding: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .tavern-container h1 {
+        margin: 0 0 0.5rem 0;
+        font-size: 2rem;
+        color: #333;
+    }
+
+    .subtitle {
+        color: #666;
+        margin-bottom: 2rem;
+    }
+
+    .tavern-content {
+        display: grid;
+        grid-template-columns: 1.5fr 1fr;
+        gap: 2rem;
+    }
+
+    .info-card,
+    .hire-card {
+        background: white;
+        border-radius: 0.75rem;
+        padding: 2rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .info-card h2,
+    .hire-card h2 {
+        margin: 0 0 1.5rem 0;
+        font-size: 1.5rem;
+        color: #333;
+    }
+
+    .info-section {
+        margin-bottom: 2rem;
+    }
+
+    .info-section:last-child {
+        margin-bottom: 0;
+    }
+
+    .info-section h3 {
+        margin: 0 0 1rem 0;
+        font-size: 1.1rem;
+        color: #333;
+    }
+
+    .info-text {
+        font-size: 0.95rem;
+        line-height: 1.6;
+        color: #666;
+    }
+
+    .info-text p {
+        margin: 0 0 1rem 0;
+    }
+
+    .info-text ul {
+        margin: 0;
+        padding-left: 1.5rem;
+    }
+
+    .info-text li {
+        margin-bottom: 0.5rem;
+    }
+
+    .mercs-overview {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+
+    .overview-stat {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        text-align: center;
+    }
+
+    .label {
+        display: block;
+        font-size: 0.875rem;
+        color: #666;
+        margin-bottom: 0.5rem;
+    }
+
+    .value {
+        display: block;
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #007bff;
+    }
+
+    .hire-details {
+        margin-bottom: 2rem;
+    }
+
+    .cost-display,
+    .your-gold {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+        font-weight: 600;
+    }
+
+    .cost-label,
+    .gold-label {
+        color: #666;
+    }
+
+    .cost-amount {
+        font-size: 1.25rem;
+        color: #ffc107;
+    }
+
+    .gold-amount {
+        font-size: 1.25rem;
+        color: #28a745;
+    }
+
+    .hire-benefit h3 {
+        margin: 0 0 0.75rem 0;
+        font-size: 1rem;
+        color: #333;
+    }
+
+    .benefit-list {
+        margin: 0;
+        padding-left: 1.5rem;
+        font-size: 0.95rem;
+    }
+
+    .benefit-list li {
+        margin-bottom: 0.5rem;
+        color: #666;
+    }
+
+    .btn-hire {
+        width: 100%;
+        padding: 1rem;
+        background: #28a745;
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-hire:hover:not(:disabled) {
+        background: #218838;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+    }
+
+    .btn-hire:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .warning {
+        color: #dc3545;
+        text-align: center;
+        margin-top: 1rem;
+        font-size: 0.875rem;
+    }
+
+    @media (max-width: 1024px) {
+        .tavern-content {
+            grid-template-columns: 1fr;
+        }
+
+        .mercs-overview {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+@code {
+    private bool IsHiring = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        GameState.OnStateChanged += StateHasChanged;
+        await base.OnInitializedAsync();
+    }
+
+    private async Task HireMercenary()
+    {
+        if ((GameState.Player?.Gold ?? 0) < 1000)
+            return;
+
+        IsHiring = true;
+        try
+        {
+            await MercenaryService.HireMercenaryAsync(GameState.Player.Id);
+            await GameState.LoadGameStateAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error hiring mercenary: {ex.Message}");
+        }
+        finally
+        {
+            IsHiring = false;
+        }
+    }
+
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        GameState.OnStateChanged -= StateHasChanged;
+    }
+}

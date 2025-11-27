@@ -1,3 +1,355 @@
 @page "/"
-<h1>Dashboard</h1>
-<p>Placeholder dashboard page.</p>
+@implements IAsyncDisposable
+@using ShopOwnerSimulator.State
+@using ShopOwnerSimulator.Models.Entities
+@inject GameState GameState
+@inject NavigationManager Navigation
+
+<PageTitle>Dashboard - Shop Owner Simulator</PageTitle>
+
+<div class="dashboard-container">
+    <div class="dashboard-grid">
+        <!-- Settlement Report -->
+        <div class="card settlement-card">
+            <h2>Today's Settlement</h2>
+            <div class="settlement-details">
+                <div class="stat-row">
+                    <span>Total Gold</span>
+                    <span class="amount">@GameState.Player?.Gold.ToString("N0")</span>
+                </div>
+                <div class="stat-row">
+                    <span>Today's Earnings</span>
+                    <span class="amount positive">+@CalculateTodayEarnings().ToString("N0")</span>
+                </div>
+                <div class="stat-row">
+                    <span>Level</span>
+                    <span>@GameState.Player?.Level</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hot Items -->
+        <div class="card hot-items-card">
+            <h2>🔥 Trending Items</h2>
+            <div class="items-list">
+                @foreach (var item in GetTrendingItems())
+                {
+                    <div class="item-trend">
+                        <span class="item-name">@item.Name</span>
+                        <span class="price-change positive">+@item.PriceChange%</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Mercenary Status -->
+        <div class="card mercenary-card">
+            <h2>Mercenary Status</h2>
+            <div class="mercenary-list">
+                @if (GameState.Mercenaries != null && GameState.Mercenaries.Count > 0)
+                {
+                    @foreach (var merc in GameState.Mercenaries.Take(3))
+                    {
+                        <div class="merc-item">
+                            <div class="merc-info">
+                                <div class="merc-name">@merc.Name</div>
+                                <div class="merc-level">Level @merc.Level</div>
+                            </div>
+                            @if (merc.CurrentDungeonId != null)
+                            {
+                                <div class="merc-status">
+                                    <span class="status-badge mining">Mining...</span>
+                                    <Timer EndTime="merc.DungeonEndTime" />
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="merc-status">
+                                    <span class="status-badge idle">Idle</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="empty-state">No mercenaries yet</p>
+                }
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card actions-card">
+            <h2>Quick Actions</h2>
+            <div class="actions-grid">
+                <button class="action-btn" @onclick="() => Navigation.NavigateTo('/mining')">
+                    <span class="icon">⛏️</span>
+                    <span>Start Mining</span>
+                </button>
+                <button class="action-btn" @onclick="() => Navigation.NavigateTo('/crafting')">
+                    <span class="icon">🔨</span>
+                    <span>Craft Item</span>
+                </button>
+                <button class="action-btn" @onclick="() => Navigation.NavigateTo('/exchange')">
+                    <span class="icon">📈</span>
+                    <span>Check Exchange</span>
+                </button>
+                <button class="action-btn" @onclick="() => Navigation.NavigateTo('/mercenary')">
+                    <span class="icon">⚔️</span>
+                    <span>Hire Mercenary</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Inventory Preview -->
+        <div class="card inventory-card">
+            <h2>Inventory</h2>
+            <div class="inventory-preview">
+                @if (GameState.Inventory != null && GameState.Inventory.Count > 0)
+                {
+                    @foreach (var item in GameState.Inventory.Take(5))
+                    {
+                        <div class="inv-item">
+                            <span class="item-name">@item.ItemTemplateId</span>
+                            <span class="item-qty">x@item.Quantity</span>
+                        </div>
+                    }
+                    @if (GameState.Inventory.Count > 5)
+                    {
+                        <div class="inv-more">
+                            +@(GameState.Inventory.Count - 5) more items
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="empty-state">Empty inventory</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .dashboard-container {
+        padding: 2rem;
+    }
+
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 2rem;
+    }
+
+    .card {
+        background: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .card h2 {
+        margin: 0 0 1.5rem 0;
+        font-size: 1.25rem;
+        color: #333;
+    }
+
+    .settlement-details .stat-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .settlement-details .stat-row:last-child {
+        border-bottom: none;
+    }
+
+    .amount {
+        font-weight: bold;
+        font-size: 1.1rem;
+    }
+
+    .amount.positive {
+        color: #28a745;
+    }
+
+    .items-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .item-trend {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem;
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+    }
+
+    .item-name {
+        font-weight: 500;
+    }
+
+    .price-change {
+        font-weight: bold;
+    }
+
+    .price-change.positive {
+        color: #28a745;
+    }
+
+    .mercenary-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .merc-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+        border-left: 4px solid #007bff;
+    }
+
+    .merc-info {
+        flex: 1;
+    }
+
+    .merc-name {
+        font-weight: 600;
+        color: #333;
+    }
+
+    .merc-level {
+        font-size: 0.875rem;
+        color: #666;
+    }
+
+    .merc-status {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.5rem;
+    }
+
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .status-badge.mining {
+        background: #ffc107;
+        color: #333;
+    }
+
+    .status-badge.idle {
+        background: #28a745;
+        color: white;
+    }
+
+    .actions-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    .action-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        font-weight: 600;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .action-btn .icon {
+        font-size: 1.5rem;
+    }
+
+    .inventory-preview {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .inv-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem;
+        background: #f8f9fa;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+    }
+
+    .item-qty {
+        font-weight: 600;
+        color: #007bff;
+    }
+
+    .inv-more {
+        padding: 0.75rem;
+        color: #666;
+        font-size: 0.875rem;
+        font-style: italic;
+    }
+
+    .empty-state {
+        color: #999;
+        text-align: center;
+        padding: 1rem;
+    }
+</style>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        GameState.OnStateChanged += StateHasChanged;
+        await base.OnInitializedAsync();
+    }
+
+    private long CalculateTodayEarnings()
+    {
+        // Mock calculation - in real app, fetch from transaction history
+        return 0;
+    }
+
+    private List<(string Name, int PriceChange)> GetTrendingItems()
+    {
+        return new()
+        {
+            ("Iron Ore", 15),
+            ("Wood", 8),
+            ("Iron Sword", 22),
+            ("Leather Armor", 5)
+        };
+    }
+
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        GameState.OnStateChanged -= StateHasChanged;
+    }
+}

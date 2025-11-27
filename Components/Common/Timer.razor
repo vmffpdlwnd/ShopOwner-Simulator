@@ -1,2 +1,107 @@
-<div>@CurrentTime</div>
-@code { private DateTime CurrentTime = DateTime.Now; }
+@implements IAsyncDisposable
+@using System.Timers
+
+<div class="timer-display @(IsExpired ? "expired" : "")">
+    <span class="time-text">@FormatTime(RemainingTime)</span>
+</div>
+
+@code {
+    [Parameter]
+    public DateTime? EndTime { get; set; }
+
+    private Timer _timer;
+    private TimeSpan RemainingTime { get; set; }
+    private bool IsExpired { get; set; }
+
+    protected override void OnInitialized()
+    {
+        UpdateRemainingTime();
+        
+        if (!IsExpired)
+        {
+            _timer = new Timer(1000);
+            _timer.Elapsed += async (sender, e) =>
+            {
+                await UpdateTimerAsync();
+            };
+            _timer.Start();
+        }
+    }
+
+    private void UpdateRemainingTime()
+    {
+        if (EndTime.HasValue)
+        {
+            RemainingTime = EndTime.Value - DateTime.UtcNow;
+            IsExpired = RemainingTime <= TimeSpan.Zero;
+            if (IsExpired)
+            {
+                RemainingTime = TimeSpan.Zero;
+            }
+        }
+    }
+
+    private async Task UpdateTimerAsync()
+    {
+        UpdateRemainingTime();
+        
+        if (IsExpired)
+        {
+            _timer?.Stop();
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private string FormatTime(TimeSpan time)
+    {
+        if (time.TotalSeconds < 0)
+            return "Expired";
+
+        if (time.TotalDays >= 1)
+            return $"{(int)time.TotalDays}d {time.Hours:D2}h";
+        
+        if (time.TotalHours >= 1)
+            return $"{time.Hours:D2}h {time.Minutes:D2}m";
+        
+        if (time.TotalMinutes >= 1)
+            return $"{time.Minutes:D2}m {time.Seconds:D2}s";
+        
+        return $"{time.Seconds:D2}s";
+    }
+
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        if (_timer != null)
+        {
+            _timer.Stop();
+            _timer.Dispose();
+        }
+    }
+}
+
+<style>
+    .timer-display {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: #e7f3ff;
+        color: #0056b3;
+        border: 1px solid #b3d9ff;
+        border-radius: 0.25rem;
+        font-weight: 600;
+        font-size: 0.875rem;
+        font-family: monospace;
+    }
+
+    .timer-display.expired {
+        background: #f8d7da;
+        color: #721c24;
+        border-color: #f5c6cb;
+    }
+
+    .time-text {
+        display: inline-block;
+        min-width: 60px;
+        text-align: center;
+    }
+</style>
