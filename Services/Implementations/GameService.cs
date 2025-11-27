@@ -61,7 +61,7 @@ public class GameService : IGameService
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Error initializing game: {ex.Message}");
+            Console.Error.WriteLine($"Error initializing game: {ex}");
             throw;
         }
     }

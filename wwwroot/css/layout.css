@@ -1,0 +1,4 @@
+/* placeholder layout styles — add real styles as needed */
+@import url('site.css');
+
+.app-container { display: flex; flex-direction: column; min-height: 100vh; }

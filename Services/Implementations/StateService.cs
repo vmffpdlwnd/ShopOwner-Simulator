@@ -40,6 +40,35 @@ public class StateService : IStateService
         {
             Console.Error.WriteLine($"Error loading player state: {ex.Message}");
         }
+
+        // Ensure we have at least a default player when PlayFab is disabled or calls failed
+        if (CurrentPlayer == null)
+        {
+            Console.Error.WriteLine("StateService: CurrentPlayer was null after load; creating default local player.");
+            CurrentPlayer = new Player
+            {
+                Id = string.IsNullOrWhiteSpace(playerId) ? Guid.NewGuid().ToString() : playerId,
+                Username = "LocalPlayer",
+                Level = 1,
+                Experience = 0,
+                Gold = 1000,
+                Crystal = 0,
+                CreatedAt = DateTime.UtcNow,
+                LastLoginAt = DateTime.UtcNow
+            };
+
+            // Persist defaults
+            try
+            {
+                await _storage.SetAsync("current_player", CurrentPlayer);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"StateService: Failed to persist default player: {ex}");
+            }
+
+            NotifyStateChanged();
+        }
     }
 
     public async Task SavePlayerStateAsync()
