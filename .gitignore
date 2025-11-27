@@ -1,3 +1,4 @@
+# .gitignore
 # Build results
 bin/
 obj/
@@ -19,6 +20,7 @@ package-lock.json
 *.swp
 *.swo
 *~
+*.user
 
 # OS
 .DS_Store
@@ -31,3 +33,15 @@ logs/
 # Temporary files
 *.tmp
 temp/
+
+# Blazor
+.vs/
+bin/
+obj/
+
+# Visual Studio
+*.sln.iml
+
+# Rider
+.idea/
+*.sln.iml
