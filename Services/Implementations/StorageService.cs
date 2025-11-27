@@ -10,6 +10,7 @@ public class StorageService : IStorageService
 
     public async Task<T> GetAsync<T>(string key)
     {
+        await Task.CompletedTask;
         var fullKey = $"{StoragePrefix}{key}";
         
         if (_cache.TryGetValue(fullKey, out var value))
@@ -22,6 +23,7 @@ public class StorageService : IStorageService
 
     public async Task SetAsync<T>(string key, T value)
     {
+        await Task.CompletedTask;
         var fullKey = $"{StoragePrefix}{key}";
         var json = JsonSerializer.Serialize(value);
         _cache[fullKey] = json;
@@ -29,12 +31,14 @@ public class StorageService : IStorageService
 
     public async Task RemoveAsync(string key)
     {
+        await Task.CompletedTask;
         var fullKey = $"{StoragePrefix}{key}";
         _cache.Remove(fullKey);
     }
 
     public async Task ClearAsync()
     {
+        await Task.CompletedTask;
         _cache.Clear();
     }
 }

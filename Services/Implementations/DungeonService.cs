@@ -97,10 +97,10 @@ public class DungeonService : IDungeonService
         var dungeon = _dungeons.FirstOrDefault(d => d.Id == progress.DungeonId);
 
         // Generate rewards and add to inventory
-        var rewards = GenerateRewards(dungeon);
+        var rewards = GenerateRewards(dungeon!);
         foreach (var reward in rewards)
         {
-            await _stateService.CurrentPlayer.Gold += reward.Value * 10; // Mock
+            _stateService.CurrentPlayer.Gold += reward.Value * 10; // Mock
         }
 
         _timerService.StopTimer(progressId);
@@ -140,17 +140,4 @@ public class DungeonService : IDungeonService
     }
 }
 
-public enum DungeonProgressStatus
-{
-    InProgress,
-    Completed,
-    Abandoned
-}
-
-public class Dungeon
-{
-    public string Id { get; set; }
-    public string Name { get; set; }
-    public int Level { get; set; }
-    public int BaseRewardTime { get; set; }
-}
+// Dungeon and DungeonProgressStatus moved to Models/Entities

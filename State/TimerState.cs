@@ -3,7 +3,7 @@ namespace ShopOwnerSimulator.State;
 
 public class TimerState
 {
-    public event Action OnTimerUpdated;
+    public event Action? OnTimerUpdated;
 
     private readonly Dictionary<string, DateTime> _timers = new();
 

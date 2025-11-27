@@ -5,7 +5,7 @@ namespace ShopOwnerSimulator.State;
 
 public class InventoryState
 {
-    public event Action OnInventoryChanged;
+    public event Action? OnInventoryChanged;
 
     public List<InventoryItem> Items { get; private set; } = new();
     public int TotalItems => Items.Sum(i => i.Quantity);
@@ -28,7 +28,7 @@ public class InventoryState
         OnInventoryChanged?.Invoke();
     }
 
-    public InventoryItem GetItem(string itemId)
+    public InventoryItem? GetItem(string itemId)
     {
         return Items.FirstOrDefault(i => i.Id == itemId);
     }

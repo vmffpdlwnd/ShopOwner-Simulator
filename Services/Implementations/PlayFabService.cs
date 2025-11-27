@@ -38,7 +38,11 @@ public class PlayFabService : IPlayFabService
             var jsonResponse = await response.Content.ReadAsStringAsync();
             var result = JsonSerializer.Deserialize<ApiResponse<T>>(jsonResponse);
 
-            return result?.Data;
+            if (result == null)
+                return default!;
+
+            // Data is nullable in ApiResponse<T>; callers expect T or will handle nulls.
+            return result.Data!;
         }
         catch (Exception ex)
         {
@@ -95,7 +99,7 @@ public class PlayFabService : IPlayFabService
         return true;
     }
 
-    public async Task<List<Mercenary>> GetMercenariesAsync(string playerId)
+        public async Task<List<Mercenary>> GetMercenariesAsync(string playerId)
     {
         var payload = new { PlayFabId = playerId };
         var response = await CallPlayFabApiAsync<List<Mercenary>>("GetUserData", payload);
@@ -147,12 +151,12 @@ public class PlayFabService : IPlayFabService
     private class ApiResponse<T>
     {
         [System.Text.Json.Serialization.JsonPropertyName("data")]
-        public T Data { get; set; }
+        public T? Data { get; set; }
         
         [System.Text.Json.Serialization.JsonPropertyName("code")]
         public int Code { get; set; }
         
         [System.Text.Json.Serialization.JsonPropertyName("status")]
-        public string Status { get; set; }
+        public string? Status { get; set; }
     }
 }

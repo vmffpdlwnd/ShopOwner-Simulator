@@ -120,23 +120,4 @@ public class PersonalShopService : IPersonalShopService
     }
 }
 
-public enum ListingStatus
-{
-    Active,
-    Sold,
-    Expired,
-    Cancelled
-}
-
-public class PersonalShopListing
-{
-    public string Id { get; set; }
-    public string PlayerId { get; set; }
-    public string ItemTemplateId { get; set; }
-    public int Quantity { get; set; }
-    public long UnitPrice { get; set; }
-    public DateTime ListedTime { get; set; }
-    public DateTime ExpireTime { get; set; }
-    public ListingStatus Status { get; set; }
-    public long TotalGoldOnSale { get; set; }
-}
+// PersonalShopListing moved to Models/Entities/PersonalShopListing.cs

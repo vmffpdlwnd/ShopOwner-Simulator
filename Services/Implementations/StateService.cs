@@ -8,9 +8,9 @@ public class StateService : IStateService
     private readonly IStorageService _storage;
     private readonly IPlayFabService _playFab;
     
-    public event Action OnStateChanged;
+    public event Action? OnStateChanged;
 
-    public Player CurrentPlayer { get; set; }
+    public Player? CurrentPlayer { get; set; }
     public List<Mercenary> Mercenaries { get; set; } = new();
     public List<InventoryItem> Inventory { get; set; } = new();
 
@@ -56,9 +56,12 @@ public class StateService : IStateService
                 await _playFab.UpdateMercenaryAsync(merc);
             }
 
-            foreach (var item in Inventory)
+            if (CurrentPlayer != null)
             {
-                await _playFab.UpdateInventoryAsync(CurrentPlayer.Id, item);
+                foreach (var item in Inventory)
+                {
+                    await _playFab.UpdateInventoryAsync(CurrentPlayer.Id, item);
+                }
             }
 
             NotifyStateChanged();
