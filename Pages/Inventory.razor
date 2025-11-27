@@ -10,10 +10,10 @@
     <h1>Inventory</h1>
 
     <div class="inventory-tabs">
-        <button class="tab @(CurrentTab == "items" ? "active" : "")" @onclick="() => CurrentTab = "items">
+        <button class="tab @(CurrentTab == "items" ? "active" : "")" @onclick="SetTabItems">
             📦 Items
         </button>
-        <button class="tab @(CurrentTab == "equipment" ? "active" : "")" @onclick="() => CurrentTab = "equipment">
+        <button class="tab @(CurrentTab == "equipment" ? "active" : "")" @onclick="SetTabEquipment">
             ⚔️ Equipment
         </button>
     </div>
@@ -426,7 +426,7 @@
         color: white;
     }
 
-    @media (max-width: 768px) {
+    @@media (max-width: 768px) {
         .items-grid,
         .equipment-grid {
             grid-template-columns: 1fr;
@@ -444,6 +444,9 @@
 
 @code {
     private string CurrentTab = "items";
+
+    private void SetTabItems() => CurrentTab = "items";
+    private void SetTabEquipment() => CurrentTab = "equipment";
 
     protected override async Task OnInitializedAsync()
     {

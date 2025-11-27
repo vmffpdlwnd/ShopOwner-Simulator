@@ -1,5 +1,5 @@
 <!-- Components/Layout/Navigation.razor -->
-@inject NavigationManager Navigation
+@inject NavigationManager NavManager
 @inject GameState GameState
 
 <nav class="nav-menu">
@@ -111,7 +111,7 @@
         flex: 1;
     }
 
-    @media (max-width: 768px) {
+    @@media (max-width: 768px) {
         .nav-list {
             flex-direction: row;
             overflow-x: auto;

@@ -9,9 +9,9 @@ public class GameState
     private readonly IGameService _gameService;
     private readonly IStateService _stateService;
 
-    public event Action OnStateChanged;
+    public event Action? OnStateChanged;
 
-    public Player Player { get; private set; }
+    public Player? Player { get; private set; }
     public List<Mercenary> Mercenaries { get; private set; } = new();
     public List<InventoryItem> Inventory { get; private set; } = new();
     public bool IsLoading { get; private set; } = false;
@@ -54,6 +54,7 @@ public class GameState
             Inventory = new List<InventoryItem>(_stateService.Inventory);
             
             NotifyStateChanged();
+            await Task.CompletedTask;
         }
         finally
         {
@@ -123,9 +124,9 @@ public class GameState
         OnStateChanged?.Invoke();
     }
 
-    private async Task<string> GetOrCreatePlayerId()
+    private Task<string> GetOrCreatePlayerId()
     {
         var playerId = Guid.NewGuid().ToString();
-        return playerId;
+        return Task.FromResult(playerId);
     }
 }

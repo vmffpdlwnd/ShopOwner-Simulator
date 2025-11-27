@@ -16,7 +16,7 @@ public class CraftingService : ICraftingService
         {
             Id = "rec_001",
             Name = "Iron Sword",
-            RequiredItems = new() { new("material_ore", 5) },
+            RequiredItems = new() { { "material_ore", 5 } },
             OutputItem = "equipment_sword",
             OutputQuantity = 1
         },
@@ -24,7 +24,7 @@ public class CraftingService : ICraftingService
         {
             Id = "rec_002",
             Name = "Leather Armor",
-            RequiredItems = new() { new("material_wood", 3), new("material_ore", 2) },
+            RequiredItems = new() { { "material_wood", 3 }, { "material_ore", 2 } },
             OutputItem = "equipment_armor",
             OutputQuantity = 1
         },
@@ -32,7 +32,7 @@ public class CraftingService : ICraftingService
         {
             Id = "rec_003",
             Name = "Health Potion",
-            RequiredItems = new() { new("material_herb", 2) },
+            RequiredItems = new() { { "material_herb", 2 } },
             OutputItem = "consumable_potion",
             OutputQuantity = 5
         }
@@ -90,6 +90,7 @@ public class CraftingService : ICraftingService
 
     public async Task<bool> CanCraftAsync(CraftingRequest request)
     {
+        await Task.CompletedTask;
         var recipe = _recipes.FirstOrDefault(r => r.Id == request.RecipeId);
         if (recipe == null)
             return false;
@@ -106,15 +107,9 @@ public class CraftingService : ICraftingService
 
     public async Task<Recipe> GetRecipeAsync(string recipeId)
     {
-        return _recipes.FirstOrDefault(r => r.Id == recipeId);
+        await Task.CompletedTask;
+        return _recipes.FirstOrDefault(r => r.Id == recipeId)!;
     }
 }
 
-public class Recipe
-{
-    public string Id { get; set; }
-    public string Name { get; set; }
-    public Dictionary<string, int> RequiredItems { get; set; } = new();
-    public string OutputItem { get; set; }
-    public int OutputQuantity { get; set; }
-}
+// Recipe moved to Models/Entities/Recipe.cs

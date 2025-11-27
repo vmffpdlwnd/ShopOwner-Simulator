@@ -25,12 +25,12 @@
                             <span class="value">@material.Price G</span>
                         </div>
                         <div class="price-change @(material.PriceChange >= 0 ? "up" : "down")">
-                            @(material.PriceChange >= 0 ? "↑" : "↓") @Math.Abs(material.PriceChange)%
+                            @(material.PriceChange >= 0 ? "↑" : "↓") @($"{Math.Abs(material.PriceChange)}%")
                         </div>
                     </div>
                     <div class="card-footer">
                         <input type="number" min="1" @bind="material.BuyQuantity" class="qty-input" placeholder="Qty">
-                        <button class="btn btn-primary" @onclick="() => BuyMaterial(material)">
+                        <button class="btn btn-primary" @onclick="@(() => BuyMaterial(material))">
                             Buy @(material.Price * material.BuyQuantity) G
                         </button>
                     </div>
@@ -182,7 +182,7 @@
         background: #0056b3;
     }
 
-    @media (max-width: 768px) {
+    @@media (max-width: 768px) {
         .materials-grid {
             grid-template-columns: 1fr;
         }

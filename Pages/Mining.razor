@@ -2,6 +2,7 @@
 @implements IAsyncDisposable
 @using ShopOwnerSimulator.Services
 @using ShopOwnerSimulator.Models.DTOs
+@using ShopOwnerSimulator.Models.Entities
 @using ShopOwnerSimulator.State
 @inject GameState GameState
 @inject IDungeonService DungeonService
@@ -330,7 +331,7 @@
         padding: 2rem 1rem;
     }
 
-    @media (max-width: 1024px) {
+    @@media (max-width: 1024px) {
         .mining-content {
             grid-template-columns: 1fr;
         }
@@ -338,7 +339,7 @@
 </style>
 
 @code {
-    private List<dynamic> Dungeons = new();
+    private List<Dungeon> Dungeons = new();
     private string SelectedDungeonId = "";
     private bool IsLoading = false;
 

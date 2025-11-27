@@ -2,6 +2,7 @@
 @implements IAsyncDisposable
 @using ShopOwnerSimulator.Services
 @using ShopOwnerSimulator.Models.DTOs
+@using ShopOwnerSimulator.Models.Entities
 @using ShopOwnerSimulator.State
 @inject GameState GameState
 @inject IExchangeService ExchangeService
@@ -25,7 +26,7 @@
                     {
                         <div class="order-card">
                             <div class="order-header">
-                                <h3>@order.ItemName</h3>
+                                <h3>@GetItemName(order.ItemTemplateId)</h3>
                                 <span class="price">@order.UnitPrice G</span>
                             </div>
                             <div class="order-details">
@@ -35,7 +36,7 @@
                                 </div>
                                 <div class="detail-row">
                                     <span>Seller</span>
-                                    <span class="value">@order.SellerId.Substring(0, 8)...</span>
+                                    <span class="value">@order.SellerId?.Substring(0, 8)...</span>
                                 </div>
                                 <div class="detail-row">
                                     <span>Listed</span>
@@ -66,9 +67,9 @@
                 {
                     @foreach (var order in MyOrders)
                     {
-                        <div class="my-order-card @(order.Status == "Completed" ? "completed" : "")">
+                        <div class="my-order-card @(order.Status == OrderStatus.Completed ? "completed" : "")">
                             <div class="order-info">
-                                <h4>@order.ItemName</h4>
+                                <h4>@GetItemName(order.ItemTemplateId)</h4>
                                 <div class="order-stat">
                                     <span>Quantity:</span>
                                     <span class="value">@order.Remaining/@order.Quantity</span>
@@ -79,10 +80,10 @@
                                 </div>
                                 <div class="order-stat">
                                     <span>Status:</span>
-                                    <span class="status-badge @order.Status.ToLower()">@order.Status</span>
+                                    <span class="status-badge @(order.Status.ToString().ToLowerInvariant())">@order.Status</span>
                                 </div>
                             </div>
-                            @if (order.Status == "Active")
+                            @if (order.Status == OrderStatus.Active)
                             {
                                 <button class="btn btn-danger" @onclick="() => CancelOrder(order.Id)">
                                     Cancel
@@ -352,7 +353,7 @@
         padding: 1.5rem;
     }
 
-    @media (max-width: 1024px) {
+    @@media (max-width: 1024px) {
         .exchange-content {
             grid-template-columns: 1fr;
         }
@@ -360,9 +361,9 @@
 </style>
 
 @code {
-    private List<ExchangeOrderDTO> AllOrders = new();
-    private List<ExchangeOrderDTO> FilteredOrders = new();
-    private List<ExchangeOrderDTO> MyOrders = new();
+    private List<ExchangeOrder> AllOrders = new();
+    private List<ExchangeOrder> FilteredOrders = new();
+    private List<ExchangeOrder> MyOrders = new();
     private int BuyQuantity = 1;
     private string ListItemId = "";
     private int ListQuantity = 1;
@@ -392,12 +393,25 @@
     private void FilterItems(string search)
     {
         if (string.IsNullOrEmpty(search))
-            FilteredOrders = new List<ExchangeOrderDTO>(AllOrders);
-        else
-            FilteredOrders = AllOrders.Where(o => o.ItemName.Contains(search, StringComparison.OrdinalIgnoreCase)).ToList();
+        {
+            FilteredOrders = new List<ExchangeOrder>(AllOrders);
+            return;
+        }
+
+        // Search by item template id for now (ItemName requires item templates lookup)
+        FilteredOrders = AllOrders
+            .Where(o => o.ItemTemplateId?.Contains(search, StringComparison.OrdinalIgnoreCase) == true)
+            .ToList();
     }
 
-    private async Task BuyOrder(ExchangeOrderDTO order)
+    private string GetItemName(string itemTemplateId)
+    {
+        // Fallback: use template id. If a mapping exists in GameState.Inventory or elsewhere, prefer that.
+        // GameState currently doesn't hold ItemTemplate list, so show template id for now.
+        return itemTemplateId ?? string.Empty;
+    }
+
+    private async Task BuyOrder(ExchangeOrder order)
     {
         try
         {

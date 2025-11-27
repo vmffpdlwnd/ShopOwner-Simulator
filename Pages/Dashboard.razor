@@ -36,7 +36,7 @@
                 {
                     <div class="item-trend">
                         <span class="item-name">@item.Name</span>
-                        <span class="price-change positive">+@item.PriceChange%</span>
+                        <span class="price-change positive">+@($"{item.PriceChange}%")</span>
                     </div>
                 }
             </div>
@@ -82,19 +82,19 @@
         <div class="card actions-card">
             <h2>Quick Actions</h2>
             <div class="actions-grid">
-                <button class="action-btn" @onclick="() => Navigation.NavigateTo('/mining')">
+                <button class="action-btn" @onclick="GoToMining">
                     <span class="icon">⛏️</span>
                     <span>Start Mining</span>
                 </button>
-                <button class="action-btn" @onclick="() => Navigation.NavigateTo('/crafting')">
+                <button class="action-btn" @onclick="GoToCrafting">
                     <span class="icon">🔨</span>
                     <span>Craft Item</span>
                 </button>
-                <button class="action-btn" @onclick="() => Navigation.NavigateTo('/exchange')">
+                <button class="action-btn" @onclick="GoToExchange">
                     <span class="icon">📈</span>
                     <span>Check Exchange</span>
                 </button>
-                <button class="action-btn" @onclick="() => Navigation.NavigateTo('/mercenary')">
+                <button class="action-btn" @onclick="GoToMercenary">
                     <span class="icon">⚔️</span>
                     <span>Hire Mercenary</span>
                 </button>
@@ -352,4 +352,9 @@
     {
         GameState.OnStateChanged -= StateHasChanged;
     }
+
+    private void GoToMining() => Navigation.NavigateTo("/mining");
+    private void GoToCrafting() => Navigation.NavigateTo("/crafting");
+    private void GoToExchange() => Navigation.NavigateTo("/exchange");
+    private void GoToMercenary() => Navigation.NavigateTo("/mercenary");
 }

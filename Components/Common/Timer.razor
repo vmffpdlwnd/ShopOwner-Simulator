@@ -1,7 +1,7 @@
 @implements IAsyncDisposable
 @using System.Timers
 
-<div class="timer-display @(IsExpired ? "expired" : "")">
+<div class='timer-display @(IsExpired ? "expired" : "")'>
     <span class="time-text">@FormatTime(RemainingTime)</span>
 </div>
 
@@ -9,7 +9,7 @@
     [Parameter]
     public DateTime? EndTime { get; set; }
 
-    private Timer _timer;
+    private System.Timers.Timer? _timer;
     private TimeSpan RemainingTime { get; set; }
     private bool IsExpired { get; set; }
 
@@ -19,7 +19,7 @@
         
         if (!IsExpired)
         {
-            _timer = new Timer(1000);
+            _timer = new System.Timers.Timer(1000);
             _timer.Elapsed += async (sender, e) =>
             {
                 await UpdateTimerAsync();

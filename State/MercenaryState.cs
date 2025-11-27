@@ -5,10 +5,10 @@ namespace ShopOwnerSimulator.State;
 
 public class MercenaryState
 {
-    public event Action OnMercenariesChanged;
+    public event Action? OnMercenariesChanged;
 
     public List<Mercenary> Mercenaries { get; private set; } = new();
-    public Mercenary SelectedMercenary { get; set; }
+    public Mercenary? SelectedMercenary { get; set; }
 
     public void UpdateMercenaries(List<Mercenary> mercenaries)
     {
@@ -33,7 +33,7 @@ public class MercenaryState
         }
     }
 
-    public Mercenary GetMercenary(string mercenaryId)
+    public Mercenary? GetMercenary(string mercenaryId)
     {
         return Mercenaries.FirstOrDefault(m => m.Id == mercenaryId);
     }

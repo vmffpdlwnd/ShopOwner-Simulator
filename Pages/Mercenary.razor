@@ -20,7 +20,7 @@
                     @foreach (var merc in GameState.Mercenaries)
                     {
                         <div class="merc-item @(SelectedMercenaryId == merc.Id ? "selected" : "")" 
-                            @onclick="() => SelectMercenary(merc.Id)">
+                            @onclick="@(() => SelectMercenary(merc.Id))">
                             <div class="merc-header">
                                 <h3>@merc.Name</h3>
                                 <span class="level-badge">Lv @merc.Level</span>
@@ -64,21 +64,21 @@
                             <div class="stat-box">
                                 <span class="stat-label">Attack</span>
                                 <div class="stat-bar">
-                                    <div class="stat-fill" style="width: @(SelectedMercenary.Stats.Attack * 2)%"></div>
+                                    <div class="stat-fill" style="@($"width: {SelectedMercenary.Stats.Attack * 2}%")"></div>
                                 </div>
                                 <span class="stat-value">@SelectedMercenary.Stats.Attack</span>
                             </div>
                             <div class="stat-box">
                                 <span class="stat-label">Defense</span>
                                 <div class="stat-bar">
-                                    <div class="stat-fill" style="width: @(SelectedMercenary.Stats.Defense * 3)%"></div>
+                                    <div class="stat-fill" style="@($"width: {SelectedMercenary.Stats.Defense * 3}%")"></div>
                                 </div>
                                 <span class="stat-value">@SelectedMercenary.Stats.Defense</span>
                             </div>
                             <div class="stat-box">
                                 <span class="stat-label">Speed</span>
                                 <div class="stat-bar">
-                                    <div class="stat-fill" style="width: @(SelectedMercenary.Stats.Speed * 2)%"></div>
+                                    <div class="stat-fill" style="@($"width: {SelectedMercenary.Stats.Speed * 2}%")"></div>
                                 </div>
                                 <span class="stat-value">@SelectedMercenary.Stats.Speed</span>
                             </div>
@@ -89,7 +89,7 @@
                     <div class="exp-section">
                         <h4>Experience</h4>
                         <div class="exp-bar">
-                            <div class="exp-fill" style="width: @((SelectedMercenary.Experience % 1000) / 10)%"></div>
+                            <div class="exp-fill" style="@($"width: {(SelectedMercenary.Experience % 1000) / 10}%")"></div>
                         </div>
                         <div class="exp-text">@SelectedMercenary.Experience / 1000</div>
                     </div>
@@ -105,7 +105,7 @@
                                     <div class="equipment-item">
                                         <span class="slot-num">Slot @(slot.Key + 1)</span>
                                         <span class="equipment-name">@slot.Value</span>
-                                        <button class="btn btn-sm btn-danger" @onclick="() => UnequipItem(slot.Key)">
+                                        <button class="btn btn-sm btn-danger" @onclick="@(() => UnequipItem(slot.Key))">
                                             Remove
                                         </button>
                                     </div>
@@ -125,7 +125,7 @@
                                 {
                                     <div class="equip-option">
                                         <span>@item.ItemTemplateId</span>
-                                        <button class="btn btn-sm btn-primary" @onclick="() => EquipItem(item.Id)">
+                                        <button class="btn btn-sm btn-primary" @onclick="@(() => EquipItem(item.Id))">
                                             Equip
                                         </button>
                                     </div>
@@ -423,7 +423,7 @@
         color: #999;
     }
 
-    @media (max-width: 1024px) {
+    @@media (max-width: 1024px) {
         .mercenary-content {
             grid-template-columns: 1fr;
         }

@@ -21,7 +21,7 @@
                     @foreach (var recipe in Recipes)
                     {
                         <div class="recipe-card @(SelectedRecipe?.Id == recipe.Id ? "selected" : "")"
-                            @onclick="() => SelectRecipe(recipe)">
+                            @onclick="@(() => SelectRecipe(recipe))">
                             <h3>@recipe.Name</h3>
                             <div class="recipe-info">
                                 <div class="info-section">
@@ -42,7 +42,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <button class="btn btn-primary" @onclick="() => CraftItem(recipe)" 
+                            <button class="btn btn-primary" @onclick="@(() => CraftItem(recipe))" 
                                 disabled="@(!recipe.CanCraft)">
                                 @(recipe.CanCraft ? "Craft" : "Not Enough Materials")
                             </button>
