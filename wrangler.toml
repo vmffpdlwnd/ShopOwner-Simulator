@@ -1,29 +1,30 @@
-# wrangler.toml
+# wrangler.toml - cleaned template
+# If you don't use Cloudflare Workers, you can remove this file.
+
 name = "shop-owner-simulator"
-main = "index.html"
 type = "javascript"
-account_id = ""
+main = "index.html"
+
+# Fill in your Cloudflare account values when you intend to deploy a Worker
+account_id = "${CF_ACCOUNT_ID}"
 workers_dev = true
 route = ""
-zone_id = ""
+zone_id = "${CF_ZONE_ID}"
 
 [env.production]
 name = "shop-owner-simulator-prod"
 route = "yourdomain.com/*"
-zone_id = ""
+zone_id = "${CF_ZONE_ID}"
 
 [[triggers.crons]]
-crons = ["0 */6 * * *"]
+# Use Wrangler v3 cron schedule key
+schedule = "0 */6 * * *"
 
 [build]
+# If you want wrangler to build the project before publishing, set the command.
 command = "dotnet publish -c Release -o publish"
-cwd = "./"
-watch_paths = ["src/**/*.rs"]
+cwd = "."
 
-[build.upload]
-format = "service-worker"
-
-[[build.upload.rules]]
-type = "CompiledContentType"
-globs = ["**/*.wasm"]
-fallthrough = true
+# Upload format: service-worker or modules depending on your Worker type
+# upload configuration omitted by default — add it only when deploying a Worker that
+# serves dynamic logic. If you deploy static files to Cloudflare Pages, use Pages instead.
