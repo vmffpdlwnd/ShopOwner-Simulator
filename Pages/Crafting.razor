@@ -1,3 +1,370 @@
 @page "/crafting"
-<h1>Crafting</h1>
-<p>Placeholder crafting page.</p>
+@implements IAsyncDisposable
+@using ShopOwnerSimulator.Services
+@using ShopOwnerSimulator.Models.DTOs
+@using ShopOwnerSimulator.State
+@inject GameState GameState
+@inject ICraftingService CraftingService
+
+<PageTitle>Crafting - Shop Owner Simulator</PageTitle>
+
+<div class="crafting-container">
+    <h1>Crafting Studio</h1>
+
+    <div class="crafting-content">
+        <!-- Recipe List -->
+        <div class="recipe-panel">
+            <h2>Recipes</h2>
+            <div class="recipe-list">
+                @if (Recipes != null && Recipes.Count > 0)
+                {
+                    @foreach (var recipe in Recipes)
+                    {
+                        <div class="recipe-card @(SelectedRecipe?.Id == recipe.Id ? "selected" : "")"
+                            @onclick="() => SelectRecipe(recipe)">
+                            <h3>@recipe.Name</h3>
+                            <div class="recipe-info">
+                                <div class="info-section">
+                                    <span class="label">Required Materials:</span>
+                                    @foreach (var req in recipe.RequiredItems)
+                                    {
+                                        <div class="material-item">
+                                            <span>@req.Key</span>
+                                            <span class="required">x@req.Value</span>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="info-section">
+                                    <span class="label">Output:</span>
+                                    <div class="output-item">
+                                        <span>@recipe.OutputItem</span>
+                                        <span class="qty">x@recipe.OutputQuantity</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary" @onclick="() => CraftItem(recipe)" 
+                                disabled="@(!recipe.CanCraft)">
+                                @(recipe.CanCraft ? "Craft" : "Not Enough Materials")
+                            </button>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="empty">Loading recipes...</p>
+                }
+            </div>
+        </div>
+
+        <!-- Inventory Panel -->
+        <div class="inventory-panel">
+            <h2>Materials</h2>
+            <div class="materials-list">
+                @if (GameState.Inventory != null && GameState.Inventory.Count > 0)
+                {
+                    @foreach (var item in GameState.Inventory.Where(i => !i.IsEquipped))
+                    {
+                        <div class="material-card">
+                            <div class="material-name">@item.ItemTemplateId</div>
+                            <div class="material-qty">
+                                <span class="qty-label">Quantity:</span>
+                                <span class="qty-value">@item.Quantity</span>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="empty">No materials in inventory</p>
+                }
+            </div>
+
+            <h2 style="margin-top: 2rem;">Crafting Queue</h2>
+            <div class="queue-list">
+                @if (CraftedItems != null && CraftedItems.Count > 0)
+                {
+                    @foreach (var item in CraftedItems)
+                    {
+                        <div class="queue-item">
+                            <span class="item-name">@item.ItemName</span>
+                            <span class="item-qty">x@item.Quantity</span>
+                            <span class="status-badge">✓ Completed</span>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="empty">No crafted items yet</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .crafting-container {
+        padding: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .crafting-container h1 {
+        margin-bottom: 2rem;
+        font-size: 2rem;
+        color: #333;
+    }
+
+    .crafting-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+    }
+
+    .recipe-panel,
+    .inventory-panel {
+        background: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .recipe-panel h2,
+    .inventory-panel h2 {
+        margin: 0 0 1.5rem 0;
+        font-size: 1.25rem;
+        color: #333;
+    }
+
+    .recipe-list,
+    .materials-list,
+    .queue-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .recipe-card {
+        border: 2px solid #eee;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .recipe-card:hover {
+        border-color: #007bff;
+        box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+    }
+
+    .recipe-card.selected {
+        border-color: #007bff;
+        background: rgba(0, 123, 255, 0.05);
+    }
+
+    .recipe-card h3 {
+        margin: 0 0 1rem 0;
+        font-size: 1.1rem;
+        color: #333;
+    }
+
+    .recipe-info {
+        margin-bottom: 1rem;
+    }
+
+    .info-section {
+        margin-bottom: 0.75rem;
+    }
+
+    .label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #666;
+        margin-bottom: 0.5rem;
+    }
+
+    .material-item,
+    .output-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem;
+        background: #f8f9fa;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .required,
+    .qty {
+        font-weight: 600;
+        color: #007bff;
+    }
+
+    .btn {
+        width: 100%;
+        padding: 0.75rem;
+        border: none;
+        border-radius: 0.375rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-primary {
+        background: #007bff;
+        color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        background: #0056b3;
+    }
+
+    .btn-primary:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .material-card {
+        border: 1px solid #eee;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        background: #f8f9fa;
+    }
+
+    .material-name {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 0.5rem;
+    }
+
+    .material-qty {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.875rem;
+    }
+
+    .qty-label {
+        color: #666;
+    }
+
+    .qty-value {
+        font-weight: 600;
+        color: #007bff;
+    }
+
+    .queue-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        border: 1px solid #d4edda;
+        border-radius: 0.5rem;
+        background: #d4edda20;
+    }
+
+    .item-name {
+        flex: 1;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .item-qty {
+        color: #666;
+        font-size: 0.875rem;
+    }
+
+    .status-badge {
+        background: #28a745;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .empty {
+        color: #999;
+        text-align: center;
+        padding: 1.5rem;
+    }
+
+    @@media (max-width: 1024px) {
+        .crafting-content {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+@code {
+    private List<RecipeDTO> Recipes = new();
+    private RecipeDTO? SelectedRecipe = null;
+    private List<(string ItemName, int Quantity)> CraftedItems = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        GameState.OnStateChanged += StateHasChanged;
+        await LoadRecipes();
+    }
+
+    private async Task LoadRecipes()
+    {
+        try
+        {
+            var recipes = await CraftingService.GetRecipesAsync();
+            Recipes = recipes.Select(r => new RecipeDTO
+            {
+                Id = r.Id,
+                Name = r.Name,
+                RequiredItems = r.RequiredItems,
+                OutputItem = r.OutputItem,
+                OutputQuantity = r.OutputQuantity,
+                CanCraft = CheckCanCraft(r)
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error loading recipes: {ex.Message}");
+        }
+    }
+
+    private void SelectRecipe(RecipeDTO recipe)
+    {
+        SelectedRecipe = recipe;
+    }
+
+    private async Task CraftItem(RecipeDTO recipe)
+    {
+        try
+        {
+            var request = new CraftingRequest { RecipeId = recipe.Id, Quantity = 1 };
+            var result = await CraftingService.CraftAsync(request);
+            
+            if (result.Success)
+            {
+                CraftedItems.Add((result.ProducedItemId, result.ProducedQuantity));
+                await GameState.LoadGameStateAsync();
+                await LoadRecipes();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error crafting item: {ex.Message}");
+        }
+    }
+
+    private bool CheckCanCraft(Recipe recipe)
+    {
+        foreach (var req in recipe.RequiredItems)
+        {
+            var item = GameState.Inventory?.FirstOrDefault(i => i.ItemTemplateId == req.Key);
+            if (item == null || item.Quantity < req.Value)
+                return false;
+        }
+        return true;
+    }
+
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        GameState.OnStateChanged -= StateHasChanged;
+    }
+}

@@ -1,3 +1,500 @@
 @page "/mercenary"
-<h1>Mercenary</h1>
-<p>Placeholder mercenary page.</p>
+@implements IAsyncDisposable
+@using ShopOwnerSimulator.Services
+@using ShopOwnerSimulator.State
+@inject GameState GameState
+@inject IMercenaryService MercenaryService
+
+<PageTitle>Mercenary - Shop Owner Simulator</PageTitle>
+
+<div class="mercenary-container">
+    <h1>Mercenary Management</h1>
+
+    <div class="mercenary-content">
+        <!-- Mercenary List -->
+        <div class="merc-list-panel">
+            <h2>Your Mercenaries</h2>
+            <div class="merc-list">
+                @if (GameState.Mercenaries != null && GameState.Mercenaries.Count > 0)
+                {
+                    @foreach (var merc in GameState.Mercenaries)
+                    {
+                        <div class="merc-item @(SelectedMercenaryId == merc.Id ? "selected" : "")" 
+                            @onclick="() => SelectMercenary(merc.Id)">
+                            <div class="merc-header">
+                                <h3>@merc.Name</h3>
+                                <span class="level-badge">Lv @merc.Level</span>
+                            </div>
+                            <div class="merc-brief">
+                                <div class="brief-stat">
+                                    <span>ATK: @merc.Stats.Attack</span>
+                                </div>
+                                <div class="brief-stat">
+                                    <span>DEF: @merc.Stats.Defense</span>
+                                </div>
+                                <div class="brief-stat">
+                                    <span>SPD: @merc.Stats.Speed</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="empty">No mercenaries yet</p>
+                }
+            </div>
+        </div>
+
+        <!-- Mercenary Details -->
+        <div class="merc-details-panel">
+            @if (!string.IsNullOrEmpty(SelectedMercenaryId) && SelectedMercenary != null)
+            {
+                <h2>Mercenary Details</h2>
+                <div class="details-card">
+                    <div class="detail-header">
+                        <h3>@SelectedMercenary.Name</h3>
+                        <span class="level-badge large">Level @SelectedMercenary.Level</span>
+                    </div>
+
+                    <!-- Stats -->
+                    <div class="stats-section">
+                        <h4>Stats</h4>
+                        <div class="stats-grid">
+                            <div class="stat-box">
+                                <span class="stat-label">Attack</span>
+                                <div class="stat-bar">
+                                    <div class="stat-fill" style="width: @(SelectedMercenary.Stats.Attack * 2)%"></div>
+                                </div>
+                                <span class="stat-value">@SelectedMercenary.Stats.Attack</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-label">Defense</span>
+                                <div class="stat-bar">
+                                    <div class="stat-fill" style="width: @(SelectedMercenary.Stats.Defense * 3)%"></div>
+                                </div>
+                                <span class="stat-value">@SelectedMercenary.Stats.Defense</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-label">Speed</span>
+                                <div class="stat-bar">
+                                    <div class="stat-fill" style="width: @(SelectedMercenary.Stats.Speed * 2)%"></div>
+                                </div>
+                                <span class="stat-value">@SelectedMercenary.Stats.Speed</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Experience -->
+                    <div class="exp-section">
+                        <h4>Experience</h4>
+                        <div class="exp-bar">
+                            <div class="exp-fill" style="width: @((SelectedMercenary.Experience % 1000) / 10)%"></div>
+                        </div>
+                        <div class="exp-text">@SelectedMercenary.Experience / 1000</div>
+                    </div>
+
+                    <!-- Equipment -->
+                    <div class="equipment-section">
+                        <h4>Equipment (@SelectedMercenary.EquipmentInventory.Count slots used)</h4>
+                        <div class="equipment-list">
+                            @if (SelectedMercenary.EquipmentInventory != null && SelectedMercenary.EquipmentInventory.Count > 0)
+                            {
+                                @foreach (var slot in SelectedMercenary.EquipmentInventory)
+                                {
+                                    <div class="equipment-item">
+                                        <span class="slot-num">Slot @(slot.Key + 1)</span>
+                                        <span class="equipment-name">@slot.Value</span>
+                                        <button class="btn btn-sm btn-danger" @onclick="() => UnequipItem(slot.Key)">
+                                            Remove
+                                        </button>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <p class="empty-slot">No equipment equipped</p>
+                            }
+                        </div>
+
+                        <h4 style="margin-top: 1rem;">Available Equipment</h4>
+                        <div class="available-equipment">
+                            @if (AvailableEquipment != null && AvailableEquipment.Count > 0)
+                            {
+                                @foreach (var item in AvailableEquipment)
+                                {
+                                    <div class="equip-option">
+                                        <span>@item.ItemTemplateId</span>
+                                        <button class="btn btn-sm btn-primary" @onclick="() => EquipItem(item.Id)">
+                                            Equip
+                                        </button>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <p class="empty-slot">No equipment available</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="no-selection">
+                    <p>Select a mercenary to view details</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .mercenary-container {
+        padding: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .mercenary-container h1 {
+        margin-bottom: 2rem;
+        font-size: 2rem;
+        color: #333;
+    }
+
+    .mercenary-content {
+        display: grid;
+        grid-template-columns: 1fr 1.5fr;
+        gap: 2rem;
+    }
+
+    .merc-list-panel,
+    .merc-details-panel {
+        background: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .merc-list-panel h2,
+    .merc-details-panel h2 {
+        margin: 0 0 1.5rem 0;
+        font-size: 1.25rem;
+        color: #333;
+    }
+
+    .merc-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .merc-item {
+        border: 2px solid #eee;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .merc-item:hover {
+        border-color: #007bff;
+        box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+    }
+
+    .merc-item.selected {
+        border-color: #007bff;
+        background: rgba(0, 123, 255, 0.05);
+    }
+
+    .merc-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+
+    .merc-header h3 {
+        margin: 0;
+        font-size: 1rem;
+        color: #333;
+    }
+
+    .level-badge {
+        background: #007bff;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .level-badge.large {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+    }
+
+    .merc-brief {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+    }
+
+    .brief-stat {
+        background: #f8f9fa;
+        padding: 0.5rem;
+        border-radius: 0.375rem;
+        font-size: 0.75rem;
+        text-align: center;
+    }
+
+    .details-card {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .detail-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #eee;
+    }
+
+    .detail-header h3 {
+        margin: 0;
+        font-size: 1.5rem;
+        color: #333;
+    }
+
+    .stats-section,
+    .exp-section,
+    .equipment-section {
+        border: 1px solid #eee;
+        padding: 1rem;
+        border-radius: 0.5rem;
+    }
+
+    .stats-section h4,
+    .exp-section h4,
+    .equipment-section h4 {
+        margin: 0 0 1rem 0;
+        font-size: 1rem;
+        color: #333;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+
+    .stat-box {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #666;
+    }
+
+    .stat-bar {
+        background: #e9ecef;
+        height: 20px;
+        border-radius: 0.25rem;
+        overflow: hidden;
+    }
+
+    .stat-fill {
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        height: 100%;
+        transition: width 0.3s;
+    }
+
+    .stat-value {
+        font-weight: 600;
+        color: #333;
+        text-align: center;
+    }
+
+    .exp-bar {
+        background: #e9ecef;
+        height: 24px;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        margin-bottom: 0.5rem;
+    }
+
+    .exp-fill {
+        background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+        height: 100%;
+        transition: width 0.3s;
+    }
+
+    .exp-text {
+        text-align: center;
+        font-size: 0.875rem;
+        color: #666;
+    }
+
+    .equipment-list,
+    .available-equipment {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .equipment-item,
+    .equip-option {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.75rem;
+        background: #f8f9fa;
+        border-radius: 0.375rem;
+    }
+
+    .slot-num {
+        font-weight: 600;
+        color: #666;
+        min-width: 60px;
+    }
+
+    .equipment-name {
+        flex: 1;
+        font-weight: 500;
+        color: #333;
+    }
+
+    .btn {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 0.375rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-sm {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.75rem;
+    }
+
+    .btn-primary {
+        background: #007bff;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #0056b3;
+    }
+
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #c82333;
+    }
+
+    .empty-slot {
+        color: #999;
+        text-align: center;
+        padding: 1rem;
+        font-size: 0.875rem;
+    }
+
+    .empty {
+        color: #999;
+        text-align: center;
+        padding: 1.5rem;
+    }
+
+    .no-selection {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 300px;
+        color: #999;
+    }
+
+    @media (max-width: 1024px) {
+        .mercenary-content {
+            grid-template-columns: 1fr;
+        }
+
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+@code {
+    private string SelectedMercenaryId = "";
+    private ShopOwnerSimulator.Models.Entities.Mercenary SelectedMercenary = null;
+    private List<ShopOwnerSimulator.Models.Entities.InventoryItem> AvailableEquipment = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        GameState.OnStateChanged += StateHasChanged;
+        await base.OnInitializedAsync();
+    }
+
+    private void SelectMercenary(string mercenaryId)
+    {
+        SelectedMercenaryId = mercenaryId;
+        SelectedMercenary = GameState.Mercenaries?.FirstOrDefault(m => m.Id == mercenaryId);
+        UpdateAvailableEquipment();
+    }
+
+    private void UpdateAvailableEquipment()
+    {
+        AvailableEquipment = GameState.Inventory?
+            .Where(i => !i.IsEquipped && i.ItemTemplateId.Contains("equipment"))
+            .ToList() ?? new();
+    }
+
+    private async Task EquipItem(string itemId)
+    {
+        if (string.IsNullOrEmpty(SelectedMercenaryId))
+            return;
+
+        try
+        {
+            await MercenaryService.EquipAsync(SelectedMercenaryId, itemId);
+            await GameState.LoadGameStateAsync();
+            SelectMercenary(SelectedMercenaryId);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error equipping item: {ex.Message}");
+        }
+    }
+
+    private async Task UnequipItem(int slotIndex)
+    {
+        if (string.IsNullOrEmpty(SelectedMercenaryId))
+            return;
+
+        try
+        {
+            await MercenaryService.UnequipAsync(SelectedMercenaryId, slotIndex);
+            await GameState.LoadGameStateAsync();
+            SelectMercenary(SelectedMercenaryId);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error unequipping item: {ex.Message}");
+        }
+    }
+
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        GameState.OnStateChanged -= StateHasChanged;
+    }
+}
