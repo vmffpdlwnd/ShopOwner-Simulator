@@ -135,4 +135,18 @@ public class ExchangeService : IExchangeService
         };
 
         _transactions.Add(transaction);
-        await _storage.SetAsync($
+        await _storage.SetAsync($"transaction_{transaction.Id}", transaction);
+
+        return transaction;
+    }
+
+    public Task<bool> CancelOrderAsync(string orderId)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<List<ItemTemplate>> GetAvailableItemsAsync()
+    {
+        throw new NotImplementedException();
+    }
+}
