@@ -37,9 +37,9 @@ public class PlayFabService : IPlayFabService
             _sessionTicket = response.SessionTicket;
             return response.PlayFabId;
         }
-        catch
+        catch (Exception ex)
         {
-            throw new Exception("로그인 실패");
+            throw new Exception("로그인 실패", ex);
         }
     }
 
@@ -62,9 +62,19 @@ public class PlayFabService : IPlayFabService
             _sessionTicket = response.SessionTicket;
             return response.PlayFabId;
         }
-        catch
+        catch (PlayFabApiException pex)
         {
-            throw new Exception("회원가입 실패");
+            // Handle common PlayFab errors with user-friendly messages
+            if (string.Equals(pex.Error, "UsernameNotAvailable", StringComparison.OrdinalIgnoreCase) || pex.ErrorCode == 1009)
+            {
+                throw new Exception("사용자 이름이 이미 사용 중입니다.", pex);
+            }
+
+            throw new Exception("회원가입 실패", pex);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception("회원가입 실패", ex);
         }
     }
 
@@ -309,7 +319,26 @@ public class PlayFabService : IPlayFabService
         if (!response.IsSuccessStatusCode)
         {
             Console.Error.WriteLine($"PlayFab API 에러: {jsonResponse}");
-            throw new Exception($"API 요청 실패: {response.StatusCode}");
+
+            // Try to parse PlayFab error payload into a structured object
+            try
+            {
+                var error = JsonSerializer.Deserialize<PlayFabError>(jsonResponse, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                if (error != null)
+                {
+                    throw new PlayFabApiException(error);
+                }
+            }
+            catch
+            {
+                // If parsing fails, fall back to raw message
+            }
+
+            throw new Exception(jsonResponse);
         }
 
         var result = JsonSerializer.Deserialize<PlayFabResponse<T>>(jsonResponse, new JsonSerializerOptions
@@ -341,5 +370,36 @@ public class PlayFabService : IPlayFabService
     private class UserDataRecord
     {
         public string Value { get; set; }
+    }
+
+    private class PlayFabError
+    {
+        public int Code { get; set; }
+        public string Status { get; set; }
+        public string Error { get; set; }
+        public int ErrorCode { get; set; }
+        public string ErrorMessage { get; set; }
+        public Dictionary<string, string[]> ErrorDetails { get; set; }
+    }
+
+    private class PlayFabApiException : Exception
+    {
+        public string Status { get; }
+        public string Error { get; }
+        public int ErrorCode { get; }
+        public string PlayFabMessage { get; }
+        public Dictionary<string, string[]> ErrorDetails { get; }
+
+        public PlayFabApiException(PlayFabError error)
+            : base(error?.ErrorMessage ?? "PlayFab API error")
+        {
+            if (error == null) return;
+
+            Status = error.Status;
+            Error = error.Error;
+            ErrorCode = error.ErrorCode;
+            PlayFabMessage = error.ErrorMessage;
+            ErrorDetails = error.ErrorDetails;
+        }
     }
 }

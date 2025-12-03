@@ -129,4 +129,51 @@ public class GameState
         var playerId = Guid.NewGuid().ToString();
         return Task.FromResult(playerId);
     }
+
+    // Initialize a local, ephemeral guest session without contacting remote services.
+    public async Task InitializeGuestAsync(Player guestPlayer)
+    {
+        if (IsInitialized)
+            return;
+
+        IsLoading = true;
+        try
+        {
+            // Populate state service with guest data (stored only in memory)
+            _stateService.CurrentPlayer = guestPlayer;
+            _stateService.Mercenaries = new List<Mercenary>();
+            _stateService.Inventory = new List<InventoryItem>();
+
+            // Provide basic starter items and a starter mercenary locally
+            var starterMerc = new Mercenary
+            {
+                Id = Guid.NewGuid().ToString(),
+                PlayerId = guestPlayer.Id,
+                Name = "초보 용병",
+                Level = 1,
+                Experience = 0,
+                Stats = new MercenaryStats { Attack = 10, Defense = 5, Speed = 10 },
+                EquipmentInventory = new Dictionary<int, string>(),
+                CurrentDungeonId = null,
+                DungeonEndTime = null,
+                IsActive = true
+            };
+
+            _stateService.Mercenaries.Add(starterMerc);
+
+            var ore = new InventoryItem { Id = Guid.NewGuid().ToString(), PlayerId = guestPlayer.Id, ItemTemplateId = "material_ore", Quantity = 10 };
+            var wood = new InventoryItem { Id = Guid.NewGuid().ToString(), PlayerId = guestPlayer.Id, ItemTemplateId = "material_wood", Quantity = 5 };
+
+            _stateService.Inventory.Add(ore);
+            _stateService.Inventory.Add(wood);
+
+            // Reflect into GameState properties
+            await LoadGameStateAsync();
+            IsInitialized = true;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
 }

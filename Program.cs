@@ -52,8 +52,6 @@ builder.Logging.SetMinimumLevel(LogLevel.Information);
 
 var host = builder.Build();
 
-// Initialize app state on startup
-var gameState = host.Services.GetRequiredService<GameState>();
-await gameState.InitializeAsync();
-
+// NOTE: Do not auto-initialize GameState here. Initialization occurs after user chooses
+// to Login or Play as Guest so we can support an optional (ephemeral) guest mode.
 await host.RunAsync();

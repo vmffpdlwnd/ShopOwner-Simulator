@@ -29,13 +29,20 @@
 @code {
     protected override async Task OnInitializedAsync()
     {
+        // If the user hasn't initialized the game state yet (i.e. hasn't logged in
+        // or started a guest session), send them to the login page so they can
+        // choose between account or guest play. Initialization will run after
+        // they choose.
         try
         {
-            await GameState.InitializeAsync();
+            if (!GameState.IsInitialized)
+            {
+                Navigation.NavigateTo("/login");
+            }
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Error initializing game state: {ex.Message}");
+            Console.Error.WriteLine($"Error checking game state: {ex.Message}");
         }
     }
 

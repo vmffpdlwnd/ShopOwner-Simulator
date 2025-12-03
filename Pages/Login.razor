@@ -3,6 +3,7 @@
 @using ShopOwnerSimulator.State
 @using ShopOwnerSimulator.Services
 @using Microsoft.JSInterop
+@using System.Text.Json
 @using Microsoft.AspNetCore.Components.Web
 @inject GameState GameState
 @inject IPlayFabService PlayFabService
@@ -413,9 +414,22 @@
         try
         {
             var deviceId = GetOrCreateDeviceId();
-            var playerId = await PlayFabService.LoginAsGuestAsync(deviceId);
-            
-            await GameState.InitializeAsync();
+
+            // Create a local, ephemeral guest player (no server calls). Data will be kept
+            // only in-memory for this session and reset when the page is reloaded.
+            var guestPlayer = new ShopOwnerSimulator.Models.Entities.Player
+            {
+                Id = $"guest_{deviceId}",
+                Username = "게스트",
+                Level = 1,
+                Experience = 0,
+                Gold = 1000,
+                Crystal = 0,
+                CreatedAt = DateTime.UtcNow,
+                LastLoginAt = DateTime.UtcNow
+            };
+
+            await GameState.InitializeGuestAsync(guestPlayer);
             Navigation.NavigateTo("/");
         }
         catch (Exception ex)
@@ -494,7 +508,41 @@
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Register error: {ex}");
-            ErrorMessage = $"회원가입 실패: 이미 존재하는 이메일일 수 있습니다";
+
+            // Prefer the outer exception message (PlayFabService may provide a localized message)
+            var payload = ex.Message;
+
+            // If inner exception contains a JSON payload, try to parse and extract details.
+            var inner = ex.InnerException?.Message;
+            if (!string.IsNullOrEmpty(inner) && inner.TrimStart().StartsWith("{"))
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(inner);
+                    if (doc.RootElement.TryGetProperty("errorMessage", out var em))
+                    {
+                        payload = $"회원가입 실패: {em.GetString()}";
+                    }
+                    else if (doc.RootElement.TryGetProperty("errorDetails", out var ed) && ed.TryGetProperty("Username", out var u))
+                    {
+                        if (u.ValueKind == JsonValueKind.Array && u.GetArrayLength() > 0)
+                            payload = $"회원가입 실패: {u[0].GetString()}";
+                        else
+                            payload = "회원가입 실패: 입력값을 확인하세요";
+                    }
+                    else
+                    {
+                        payload = "회원가입 실패: 서버 오류가 발생했습니다";
+                    }
+                }
+                catch
+                {
+                    // If parsing fails, keep outer message
+                }
+            }
+
+            // Show the best available message to user
+            ErrorMessage = payload;
         }
         finally
         {
