@@ -21,10 +21,10 @@ jobs:
           dotnet-version: '8.0.x'
       
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore ShopOwner-Simulator.sln
       
       - name: Build
-        run: dotnet build -c Release --no-restore
+        run: dotnet build ShopOwner-Simulator.sln -c Release --no-restore
       
       - name: Publish
         # NOTE: Do NOT inject sensitive secrets (like PlayFab secret keys) into a client build
@@ -33,7 +33,7 @@ jobs:
         # keep it only on the server or use serverless/worker endpoints.
         env:
           PLAYFAB_TITLE_ID: ${{ secrets.PLAYFAB_TITLE_ID }} # TitleId is not secret and can be provided if needed
-        run: dotnet publish -c Release -o publish
+        run: dotnet publish ShopOwnerSimulator.csproj -c Release -o publish
       
       - name: Upload to Cloudflare Pages
         uses: cloudflare/pages-action@v1
