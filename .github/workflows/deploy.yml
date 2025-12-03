@@ -49,9 +49,21 @@ jobs:
           fi
           echo "INFO: If CLOUDFLARE_PAGES_PROJECT is not set, the workflow will attempt to auto-detect the project name."
       
-      - name: Detect Cloudflare Pages project (if needed)
-        if: ${{ !secrets.CLOUDFLARE_PAGES_PROJECT }}
+      - name: Prepare Cloudflare Pages project name
         run: |
+          set -euo pipefail
+
+          # If secret provided, use it; otherwise try to auto-detect via API
+          PROVIDED_PROJECT='${{ secrets.CLOUDFLARE_PAGES_PROJECT }}'
+
+          if [ -n "$PROVIDED_PROJECT" ]; then
+            echo "Using provided project name from CLOUDFLARE_PAGES_PROJECT"
+            echo "PROJECT_NAME=$PROVIDED_PROJECT" >> $GITHUB_ENV
+            exit 0
+          fi
+
+          echo "CLOUDFLARE_PAGES_PROJECT not set; attempting auto-detect via Cloudflare API"
+
           echo "Installing jq for JSON parsing..."
           sudo apt-get update -qq
           sudo apt-get install -y -qq jq
@@ -86,12 +98,6 @@ jobs:
 
           echo "Detected project: $selected"
           echo "PROJECT_NAME=$selected" >> $GITHUB_ENV
-
-      - name: Use provided project name (if set)
-        if: ${{ secrets.CLOUDFLARE_PAGES_PROJECT }}
-        run: |
-          echo "Using CLOUDFLARE_PAGES_PROJECT from secrets"
-          echo "PROJECT_NAME=${{ secrets.CLOUDFLARE_PAGES_PROJECT }}" >> $GITHUB_ENV
 
       - name: Upload to Cloudflare Pages
         uses: cloudflare/pages-action@v1
