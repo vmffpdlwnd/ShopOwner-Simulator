@@ -1,7 +1,6 @@
 // Services/Implementations/PlayFabService.cs
 using System.Text;
 using System.Text.Json;
-using System.Collections.Generic;
 using ShopOwnerSimulator.Models.Entities;
 
 namespace ShopOwnerSimulator.Services.Implementations;
@@ -9,225 +8,338 @@ namespace ShopOwnerSimulator.Services.Implementations;
 public class PlayFabService : IPlayFabService
 {
     private readonly HttpClient _httpClient;
-    private readonly string? _titleId;
-    private readonly string? _secretKey;
-    private readonly bool _enabled;
+    private readonly string _titleId;
+    private readonly string _secretKey;
+    private string _sessionTicket;
 
-    public PlayFabService(string? titleId, string? secretKey)
+    public PlayFabService(string titleId, string secretKey)
     {
-        _titleId = titleId;
-        _secretKey = secretKey;
+        _titleId = titleId ?? "EC0FE";
+        _secretKey = secretKey ?? "5W7MEBQ5SFA68FA35KPTG6W4JT5I67AHEQDK8TCCM4TJ3TH8U8";
         _httpClient = new HttpClient();
+        _httpClient.DefaultRequestHeaders.Add("X-PlayFabSDK", "CSharpSDK-1.0");
+    }
 
-        // Consider PlayFab disabled when configuration contains placeholders or is empty
-        _enabled = !string.IsNullOrWhiteSpace(_titleId)
-                   && !string.IsNullOrWhiteSpace(_secretKey)
-                   && !_titleId!.Contains("${")
-                   && !_titleId!.Contains("your");
-
-        if (!_enabled)
+    // 로그인 (아이디/비밀번호)
+    public async Task<string> LoginWithEmailAsync(string email, string password)
+    {
+        var url = $"https://{_titleId}.playfabapi.com/Client/LoginWithEmailAddress";
+        var payload = new
         {
-            Console.Error.WriteLine("PlayFabService: PlayFab disabled due to missing or placeholder configuration.");
+            TitleId = _titleId,
+            Email = email,
+            Password = password
+        };
+
+        try
+        {
+            var response = await PostAsync<LoginResult>(url, payload, false);
+            _sessionTicket = response.SessionTicket;
+            return response.PlayFabId;
+        }
+        catch
+        {
+            throw new Exception("로그인 실패");
         }
     }
 
-    private async Task<T> CallPlayFabApiAsync<T>(string functionName, object payload)
+    // 회원가입
+    public async Task<string> RegisterWithEmailAsync(string email, string password, string username)
     {
+        var url = $"https://{_titleId}.playfabapi.com/Client/RegisterPlayFabUser";
+        var payload = new
+        {
+            TitleId = _titleId,
+            Email = email,
+            Password = password,
+            Username = username,
+            RequireBothUsernameAndEmail = false
+        };
+
         try
         {
-            if (!_enabled)
-            {
-                Console.Error.WriteLine($"PlayFabService: Skipping API call '{functionName}' because PlayFab is disabled.");
-                return default!;
-            }
-
-            var apiRoot = $"https://{_titleId}.playfabapi.com";
-            var url = $"{apiRoot}/Server/{functionName}";
-            var content = new StringContent(
-                JsonSerializer.Serialize(payload),
-                Encoding.UTF8,
-                "application/json");
-
-            _httpClient.DefaultRequestHeaders.Clear();
-            _httpClient.DefaultRequestHeaders.Add("X-SecretKey", _secretKey);
-
-            var response = await _httpClient.PostAsync(url, content);
-            response.EnsureSuccessStatusCode();
-
-            var jsonResponse = await response.Content.ReadAsStringAsync();
-            var result = JsonSerializer.Deserialize<ApiResponse<T>>(jsonResponse);
-
-            if (result == null)
-                return default!;
-
-            // Data is nullable in ApiResponse<T>; callers expect T or will handle nulls.
-            return result.Data!;
+            var response = await PostAsync<LoginResult>(url, payload, false);
+            _sessionTicket = response.SessionTicket;
+            return response.PlayFabId;
         }
-        catch (Exception ex)
+        catch
         {
-            Console.Error.WriteLine($"PlayFab API Error: {ex.Message}");
-            throw;
+            throw new Exception("회원가입 실패");
+        }
+    }
+
+    // 게스트 로그인
+    public async Task<string> LoginAsGuestAsync(string deviceId)
+    {
+        var url = $"https://{_titleId}.playfabapi.com/Client/LoginWithCustomID";
+        var payload = new
+        {
+            TitleId = _titleId,
+            CustomId = deviceId,
+            CreateAccount = true
+        };
+
+        try
+        {
+            var response = await PostAsync<LoginResult>(url, payload, false);
+            _sessionTicket = response.SessionTicket;
+            return response.PlayFabId;
+        }
+        catch
+        {
+            throw new Exception("게스트 로그인 실패");
         }
     }
 
     public async Task<Player> GetPlayerAsync(string playerId)
     {
-        if (!_enabled)
+        var url = $"https://{_titleId}.playfabapi.com/Client/GetUserData";
+        
+        try
         {
-            // Return a local stub player for offline/local development
-            return await Task.FromResult(new Player
+            var response = await PostAsync<UserDataResponse>(url, new { }, true);
+            
+            if (response?.Data == null)
             {
-                Id = string.IsNullOrWhiteSpace(playerId) ? Guid.NewGuid().ToString() : playerId,
-                Username = "LocalPlayer",
-                Level = 1,
-                Experience = 0,
-                Gold = 1000,
-                Crystal = 0,
+                return CreateDefaultPlayer(playerId);
+            }
+
+            return new Player
+            {
+                Id = playerId,
+                Username = response.Data.ContainsKey("Username") ? response.Data["Username"].Value : "플레이어",
+                Level = response.Data.ContainsKey("Level") ? int.Parse(response.Data["Level"].Value) : 1,
+                Gold = response.Data.ContainsKey("Gold") ? long.Parse(response.Data["Gold"].Value) : 10000,
+                Experience = response.Data.ContainsKey("Experience") ? long.Parse(response.Data["Experience"].Value) : 0,
                 CreatedAt = DateTime.UtcNow,
                 LastLoginAt = DateTime.UtcNow
-            });
+            };
         }
-
-        var response = await CallPlayFabApiAsync<Player>("GetUserData", new { PlayFabId = playerId });
-        return response ?? throw new Exception("Player not found");
+        catch
+        {
+            return CreateDefaultPlayer(playerId);
+        }
     }
 
     public async Task<Player> CreatePlayerAsync(string username)
     {
-        var payload = new
-        {
-            DisplayName = username,
-            TitleId = _titleId
-        };
-        if (!_enabled)
-        {
-            return await Task.FromResult(new Player
-            {
-                Id = Guid.NewGuid().ToString(),
-                Username = username,
-                Level = 1,
-                Experience = 0,
-                Gold = 1000,
-                Crystal = 0,
-                CreatedAt = DateTime.UtcNow,
-                LastLoginAt = DateTime.UtcNow
-            });
-        }
-
-        var response = await CallPlayFabApiAsync<Player>("CreateOpenIdConnection", payload);
-        return response;
+        var playerId = Guid.NewGuid().ToString();
+        var player = CreateDefaultPlayer(playerId);
+        player.Username = username;
+        
+        await UpdatePlayerAsync(player);
+        return player;
     }
 
     public async Task<bool> UpdatePlayerAsync(Player player)
     {
-        if (!_enabled)
-            return await Task.FromResult(true);
-
+        var url = $"https://{_titleId}.playfabapi.com/Client/UpdateUserData";
         var payload = new
         {
-            PlayFabId = player.Id,
-            Data = new
+            Data = new Dictionary<string, string>
             {
-                Username = player.Username,
-                Level = player.Level,
-                Experience = player.Experience,
-                Gold = player.Gold
+                { "Username", player.Username },
+                { "Level", player.Level.ToString() },
+                { "Gold", player.Gold.ToString() },
+                { "Experience", player.Experience.ToString() }
             }
         };
 
-        await CallPlayFabApiAsync<object>("UpdateUserData", payload);
-        return true;
+        try
+        {
+            await PostAsync<object>(url, payload, true);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"플레이어 업데이트 실패: {ex.Message}");
+            return false;
+        }
     }
 
     public async Task<bool> UpdatePlayerGoldAsync(string playerId, long goldAmount)
     {
-        if (!_enabled)
-            return await Task.FromResult(true);
-
-        var payload = new
-        {
-            PlayFabId = playerId,
-            ChangeValue = goldAmount
-        };
-
-        await CallPlayFabApiAsync<object>("AddUserVirtualCurrency", payload);
-        return true;
+        var player = await GetPlayerAsync(playerId);
+        player.Gold += goldAmount;
+        return await UpdatePlayerAsync(player);
     }
 
-        public async Task<List<Mercenary>> GetMercenariesAsync(string playerId)
+    public async Task<List<Mercenary>> GetMercenariesAsync(string playerId)
     {
-            if (!_enabled)
+        var url = $"https://{_titleId}.playfabapi.com/Client/GetUserData";
+        
+        try
+        {
+            var response = await PostAsync<UserDataResponse>(url, new { }, true);
+            
+            if (response?.Data != null && response.Data.ContainsKey("Mercenaries"))
             {
-                return await Task.FromResult(new List<Mercenary>());
+                var json = response.Data["Mercenaries"].Value;
+                return JsonSerializer.Deserialize<List<Mercenary>>(json) ?? new List<Mercenary>();
             }
 
-            var payload = new { PlayFabId = playerId };
-            var response = await CallPlayFabApiAsync<List<Mercenary>>("GetUserData", payload);
-            return response ?? new List<Mercenary>();
+            return new List<Mercenary>();
+        }
+        catch
+        {
+            return new List<Mercenary>();
+        }
     }
 
     public async Task<bool> UpdateMercenaryAsync(Mercenary mercenary)
     {
-        if (!_enabled)
-            return await Task.FromResult(true);
+        var mercenaries = await GetMercenariesAsync(mercenary.PlayerId);
+        var existing = mercenaries.FirstOrDefault(m => m.Id == mercenary.Id);
+        
+        if (existing != null)
+        {
+            mercenaries.Remove(existing);
+        }
+        mercenaries.Add(mercenary);
 
+        var url = $"https://{_titleId}.playfabapi.com/Client/UpdateUserData";
         var payload = new
         {
-            PlayFabId = mercenary.PlayerId,
-            MercenaryId = mercenary.Id,
-            Data = new
+            Data = new Dictionary<string, string>
             {
-                Level = mercenary.Level,
-                Experience = mercenary.Experience,
-                Stats = mercenary.Stats
+                { "Mercenaries", JsonSerializer.Serialize(mercenaries) }
             }
         };
 
-        await CallPlayFabApiAsync<object>("UpdateUserData", payload);
-        return true;
+        try
+        {
+            await PostAsync<object>(url, payload, true);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public async Task<List<InventoryItem>> GetInventoryAsync(string playerId)
     {
-        if (!_enabled)
+        var url = $"https://{_titleId}.playfabapi.com/Client/GetUserData";
+        
+        try
         {
-            return await Task.FromResult(new List<InventoryItem>());
-        }
+            var response = await PostAsync<UserDataResponse>(url, new { }, true);
+            
+            if (response?.Data != null && response.Data.ContainsKey("Inventory"))
+            {
+                var json = response.Data["Inventory"].Value;
+                return JsonSerializer.Deserialize<List<InventoryItem>>(json) ?? new List<InventoryItem>();
+            }
 
-        var payload = new { PlayFabId = playerId };
-        var response = await CallPlayFabApiAsync<List<InventoryItem>>("GetUserInventory", payload);
-        return response ?? new List<InventoryItem>();
+            return new List<InventoryItem>();
+        }
+        catch
+        {
+            return new List<InventoryItem>();
+        }
     }
 
     public async Task<bool> UpdateInventoryAsync(string playerId, InventoryItem item)
     {
-        if (!_enabled)
-            return await Task.FromResult(true);
+        var inventory = await GetInventoryAsync(playerId);
+        var existing = inventory.FirstOrDefault(i => i.Id == item.Id);
+        
+        if (existing != null)
+        {
+            inventory.Remove(existing);
+        }
+        
+        if (item.Quantity > 0)
+        {
+            inventory.Add(item);
+        }
 
+        var url = $"https://{_titleId}.playfabapi.com/Client/UpdateUserData";
         var payload = new
         {
-            PlayFabId = playerId,
-            ItemId = item.Id,
-            Data = new
+            Data = new Dictionary<string, string>
             {
-                Quantity = item.Quantity,
-                IsEquipped = item.IsEquipped
+                { "Inventory", JsonSerializer.Serialize(inventory) }
             }
         };
 
-        await CallPlayFabApiAsync<object>("UpdateUserData", payload);
-        return true;
+        try
+        {
+            await PostAsync<object>(url, payload, true);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
-    private class ApiResponse<T>
+    private Player CreateDefaultPlayer(string playerId)
     {
-        [System.Text.Json.Serialization.JsonPropertyName("data")]
-        public T? Data { get; set; }
+        return new Player
+        {
+            Id = playerId,
+            Username = "플레이어",
+            Level = 1,
+            Experience = 0,
+            Gold = 10000,
+            Crystal = 0,
+            CreatedAt = DateTime.UtcNow,
+            LastLoginAt = DateTime.UtcNow
+        };
+    }
+
+    private async Task<T> PostAsync<T>(string url, object payload, bool requireAuth)
+    {
+        var content = new StringContent(
+            JsonSerializer.Serialize(payload),
+            Encoding.UTF8,
+            "application/json");
+
+        _httpClient.DefaultRequestHeaders.Remove("X-Authorization");
         
-        [System.Text.Json.Serialization.JsonPropertyName("code")]
-        public int Code { get; set; }
-        
-        [System.Text.Json.Serialization.JsonPropertyName("status")]
-        public string? Status { get; set; }
+        if (requireAuth && !string.IsNullOrEmpty(_sessionTicket))
+        {
+            _httpClient.DefaultRequestHeaders.Add("X-Authorization", _sessionTicket);
+        }
+
+        var response = await _httpClient.PostAsync(url, content);
+        var jsonResponse = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            Console.Error.WriteLine($"PlayFab API 에러: {jsonResponse}");
+            throw new Exception($"API 요청 실패: {response.StatusCode}");
+        }
+
+        var result = JsonSerializer.Deserialize<PlayFabResponse<T>>(jsonResponse, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        return result.data;
+    }
+
+    private class PlayFabResponse<T>
+    {
+        public int code { get; set; }
+        public string status { get; set; }
+        public T data { get; set; }
+    }
+
+    private class LoginResult
+    {
+        public string PlayFabId { get; set; }
+        public string SessionTicket { get; set; }
+    }
+
+    private class UserDataResponse
+    {
+        public Dictionary<string, UserDataRecord> Data { get; set; }
+    }
+
+    private class UserDataRecord
+    {
+        public string Value { get; set; }
     }
 }
