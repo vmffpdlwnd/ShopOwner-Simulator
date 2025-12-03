@@ -3,11 +3,11 @@
 @using ShopOwnerSimulator.State
 @inject GameState GameState
 
-<PageTitle>General Shop - Shop Owner Simulator</PageTitle>
+<PageTitle>상점 - 상점주인 시뮬레이터</PageTitle>
 
 <div class="shop-container">
-    <h1>General Shop</h1>
-    <p class="subtitle">Buy essential materials for crafting</p>
+    <h1>일반 상점</h1>
+    <p class="subtitle">제작에 필요한 재료를 구매하세요</p>
 
     <div class="shop-content">
         <div class="materials-grid">
@@ -21,17 +21,17 @@
                     <div class="card-body">
                         <p class="description">@material.Description</p>
                         <div class="current-price">
-                            <span class="label">Current Price</span>
+                            <span class="label">현재 가격</span>
                             <span class="value">@material.Price G</span>
                         </div>
                         <div class="price-change @(material.PriceChange >= 0 ? "up" : "down")">
-                            @(material.PriceChange >= 0 ? "↑" : "↓") @($"{Math.Abs(material.PriceChange)}%")
+                            @(material.PriceChange >= 0 ? "↑" : "↓") @Math.Abs(material.PriceChange)%
                         </div>
                     </div>
                     <div class="card-footer">
-                        <input type="number" min="1" @bind="material.BuyQuantity" class="qty-input" placeholder="Qty">
-                        <button class="btn btn-primary" @onclick="@(() => BuyMaterial(material))">
-                            Buy @(material.Price * material.BuyQuantity) G
+                        <input type="number" min="1" @bind="material.BuyQuantity" class="qty-input" placeholder="수량">
+                        <button class="btn btn-primary" @onclick="() => BuyMaterial(material)">
+                            구매 @(material.Price * material.BuyQuantity) G
                         </button>
                     </div>
                 </div>
@@ -209,19 +209,19 @@
     {
         return new()
         {
-            new MaterialDisplay { Name = "Iron Ore", Description = "Essential material for crafting", Price = 100, PriceChange = 5 },
-            new MaterialDisplay { Name = "Wood", Description = "Wood for various crafts", Price = 80, PriceChange = -2 },
-            new MaterialDisplay { Name = "Herb", Description = "Rare herbs for potions", Price = 150, PriceChange = 10 },
-            new MaterialDisplay { Name = "Stone", Description = "Building material", Price = 60, PriceChange = 3 },
-            new MaterialDisplay { Name = "Crystal", Description = "Magical crystal", Price = 200, PriceChange = 8 },
-            new MaterialDisplay { Name = "Thread", Description = "Fine thread for crafting", Price = 50, PriceChange = -1 }
+            new MaterialDisplay { Name = "철광석", Description = "제작에 필수적인 재료", Price = 100, PriceChange = 5 },
+            new MaterialDisplay { Name = "목재", Description = "다양한 제작에 사용되는 목재", Price = 80, PriceChange = -2 },
+            new MaterialDisplay { Name = "약초", Description = "물약에 사용되는 희귀 약초", Price = 150, PriceChange = 10 },
+            new MaterialDisplay { Name = "돌", Description = "건축 재료", Price = 60, PriceChange = 3 },
+            new MaterialDisplay { Name = "크리스탈", Description = "마법 크리스탈", Price = 200, PriceChange = 8 },
+            new MaterialDisplay { Name = "실", Description = "제작용 고급 실", Price = 50, PriceChange = -1 }
         };
     }
 
     private void BuyMaterial(MaterialDisplay material)
     {
-        // Implement purchase logic
-        Console.WriteLine($"Buying {material.BuyQuantity} {material.Name}");
+        // 구매 로직 구현
+        Console.WriteLine($"{material.Name} {material.BuyQuantity}개 구매");
     }
 
     async ValueTask IAsyncDisposable.DisposeAsync()

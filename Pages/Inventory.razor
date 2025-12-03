@@ -4,17 +4,17 @@
 @using ShopOwnerSimulator.State
 @inject GameState GameState
 
-<PageTitle>Inventory - Shop Owner Simulator</PageTitle>
+<PageTitle>인벤토리 - 상점주인 시뮬레이터</PageTitle>
 
 <div class="inventory-container">
-    <h1>Inventory</h1>
+    <h1>인벤토리</h1>
 
     <div class="inventory-tabs">
-        <button class="tab @(CurrentTab == "items" ? "active" : "")" @onclick="SetTabItems">
-            📦 Items
+        <button class='tab @(CurrentTab == "items" ? "active" : "")' @onclick='() => CurrentTab = "items"'>
+            📦 아이템
         </button>
-        <button class="tab @(CurrentTab == "equipment" ? "active" : "")" @onclick="SetTabEquipment">
-            ⚔️ Equipment
+        <button class='tab @(CurrentTab == "equipment" ? "active" : "")' @onclick='() => CurrentTab = "equipment"'>
+            ⚔️ 장비
         </button>
     </div>
 
@@ -22,7 +22,7 @@
         @if (CurrentTab == "items")
         {
             <div class="items-grid">
-                <h2>Materials & Items</h2>
+                <h2>재료 & 아이템</h2>
                 @if (GameState.Inventory != null && GameState.Inventory.Count > 0)
                 {
                     @foreach (var item in GameState.Inventory.Where(i => !i.IsEquipped))
@@ -34,20 +34,20 @@
                             </div>
                             <div class="card-content">
                                 <div class="item-stat">
-                                    <span class="label">Item ID</span>
+                                    <span class="label">아이템 ID</span>
                                     <span class="value">@item.Id</span>
                                 </div>
                                 <div class="item-stat">
-                                    <span class="label">Status</span>
-                                    <span class="value">Available</span>
+                                    <span class="label">상태</span>
+                                    <span class="value">사용가능</span>
                                 </div>
                             </div>
                             <div class="card-actions">
                                 <button class="btn btn-sm btn-secondary">
-                                    View Details
+                                    상세보기
                                 </button>
                                 <button class="btn btn-sm btn-primary">
-                                    Sell
+                                    판매
                                 </button>
                             </div>
                         </div>
@@ -55,14 +55,14 @@
                 }
                 else
                 {
-                    <p class="empty-state">No items in inventory</p>
+                    <p class="empty-state">인벤토리가 비어있습니다</p>
                 }
             </div>
         }
         else if (CurrentTab == "equipment")
         {
             <div class="equipment-section">
-                <h2>Equipped Equipment</h2>
+                <h2>착용중인 장비</h2>
                 <div class="equipment-grid">
                     @if (GameState.Inventory != null && GameState.Inventory.Any(i => i.IsEquipped))
                     {
@@ -70,28 +70,28 @@
                         {
                             <div class="equipment-card">
                                 <div class="equipment-header">
-                                    <span class="equipped-badge">✓ Equipped</span>
+                                    <span class="equipped-badge">✓ 착용중</span>
                                     <h3>@item.ItemTemplateId</h3>
                                 </div>
                                 <div class="equipment-info">
                                     <div class="info-row">
-                                        <span class="label">Equipped to</span>
+                                        <span class="label">착용 중인 용병</span>
                                         <span class="value">@item.EquippedMercenaryId</span>
                                     </div>
                                 </div>
                                 <button class="btn btn-danger w-100">
-                                    Unequip
+                                    해제
                                 </button>
                             </div>
                         }
                     }
                     else
                     {
-                        <p class="empty-state">No equipped items</p>
+                        <p class="empty-state">착용중인 장비가 없습니다</p>
                     }
                 </div>
 
-                <h2 style="margin-top: 2rem;">Unequipped Items</h2>
+                <h2 style="margin-top: 2rem;">미착용 장비</h2>
                 <div class="equipment-grid">
                     @if (GameState.Inventory != null && GameState.Inventory.Any(i => !i.IsEquipped && i.ItemTemplateId.Contains("equipment")))
                     {
@@ -103,14 +103,14 @@
                                     <span class="qty-badge">x@item.Quantity</span>
                                 </div>
                                 <button class="btn btn-primary w-100">
-                                    Equip to Mercenary
+                                    용병에게 장착
                                 </button>
                             </div>
                         }
                     }
                     else
                     {
-                        <p class="empty-state">No unequipped equipment</p>
+                        <p class="empty-state">미착용 장비가 없습니다</p>
                     }
                 </div>
             </div>
@@ -119,22 +119,22 @@
 
     <!-- Inventory Summary -->
     <div class="inventory-summary">
-        <h2>Summary</h2>
+        <h2>요약</h2>
         <div class="summary-grid">
             <div class="summary-card">
-                <span class="label">Total Items</span>
+                <span class="label">총 아이템</span>
                 <span class="value">@GameState.Inventory?.Count ?? 0</span>
             </div>
             <div class="summary-card">
-                <span class="label">Total Quantity</span>
+                <span class="label">총 수량</span>
                 <span class="value">@(GameState.Inventory?.Sum(i => i.Quantity) ?? 0)</span>
             </div>
             <div class="summary-card">
-                <span class="label">Equipped Items</span>
+                <span class="label">착용중인 장비</span>
                 <span class="value">@(GameState.Inventory?.Count(i => i.IsEquipped) ?? 0)</span>
             </div>
             <div class="summary-card">
-                <span class="label">Available Items</span>
+                <span class="label">사용가능 아이템</span>
                 <span class="value">@(GameState.Inventory?.Count(i => !i.IsEquipped) ?? 0)</span>
             </div>
         </div>
@@ -444,9 +444,6 @@
 
 @code {
     private string CurrentTab = "items";
-
-    private void SetTabItems() => CurrentTab = "items";
-    private void SetTabEquipment() => CurrentTab = "equipment";
 
     protected override async Task OnInitializedAsync()
     {

@@ -1,56 +1,114 @@
 @page "/login"
 @implements IAsyncDisposable
 @using ShopOwnerSimulator.State
+@using ShopOwnerSimulator.Services
+@using Microsoft.JSInterop
+@using Microsoft.AspNetCore.Components.Web
 @inject GameState GameState
+@inject IPlayFabService PlayFabService
 @inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 
-<PageTitle>Login - Shop Owner Simulator</PageTitle>
+<PageTitle>로그인 - Shop Owner Simulator</PageTitle>
 
 <div class="login-container">
     <div class="login-box">
         <div class="login-header">
-            <h1>🏪 Shop Owner Simulator</h1>
-            <p class="tagline">Build your trading empire</p>
+            <h1>🏪 상점주인 시뮬레이터</h1>
+            <p class="tagline">당신만의 거래 제국을 건설하세요</p>
         </div>
 
-        <div class="login-form">
-            <div class="form-group">
-                <label>Username</label>
-                <input type="text" @bind="Username" class="form-control" placeholder="Enter username" @keyup="e => { if (e.Key == \"Enter\") LoginAsync(); }">
-            </div>
-
-            <div class="form-group">
-                <label>Email (Optional)</label>
-                <input type="email" @bind="Email" class="form-control" placeholder="your@email.com">
-            </div>
-
-            <button class="btn btn-login" @onclick="LoginAsync" disabled="@(string.IsNullOrEmpty(Username) || IsLoading)">
-                @(IsLoading ? "Logging in..." : "Start Game")
-            </button>
-
-            @if (!string.IsNullOrEmpty(ErrorMessage))
-            {
-                <div class="error-message">
-                    @ErrorMessage
+        @if (IsGuestMode)
+        {
+            <div class="guest-mode">
+                <div class="mode-switch">
+                    <button class="mode-btn" @onclick="() => IsGuestMode = false">계정 로그인</button>
                 </div>
-            }
-        </div>
+                
+                <div class="guest-info">
+                    <h3>🎮 게스트로 플레이</h3>
+                    <p>로그인 없이 바로 시작하세요. 데이터는 이 기기에 저장됩니다.</p>
+                    <p class="warning">⚠️ 브라우저 데이터 삭제 시 진행 상황이 사라집니다.</p>
+                </div>
+
+                <button class="btn btn-guest" @onclick="LoginAsGuest" disabled="@IsLoading">
+                    @(IsLoading ? "시작 중..." : "게스트로 시작하기")
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="account-mode">
+                <div class="mode-switch">
+                    <button class="mode-btn" @onclick="() => IsGuestMode = true">게스트로 플레이</button>
+                </div>
+
+                <div class="login-tabs">
+                    <button class="tab @(IsRegisterMode ? "" : "active")" @onclick="() => IsRegisterMode = false">
+                        로그인
+                    </button>
+                    <button class="tab @(IsRegisterMode ? "active" : "")" @onclick="() => IsRegisterMode = true">
+                        회원가입
+                    </button>
+                </div>
+
+                <div class="login-form">
+                    @if (IsRegisterMode)
+                    {
+                        <div class="form-group">
+                            <label>사용자명</label>
+                            <input type="text" @bind="Username" class="form-control" placeholder="닉네임 입력">
+                        </div>
+                    }
+
+                    <div class="form-group">
+                        <label>이메일</label>
+                        <input type="email" @bind="Email" class="form-control" placeholder="이메일 입력">
+                    </div>
+
+                    <div class="form-group">
+                        <label>비밀번호</label>
+                        <input type="password" @bind="Password" class="form-control" placeholder="비밀번호 입력" 
+                            @onkeyup="OnPasswordKeyUp">
+                    </div>
+
+                    @if (IsRegisterMode)
+                    {
+                        <div class="form-group">
+                            <label>비밀번호 확인</label>
+                            <input type="password" @bind="PasswordConfirm" class="form-control" placeholder="비밀번호 재입력">
+                        </div>
+                    }
+
+                    <button class="btn btn-login" @onclick="LoginOrRegister" disabled="@IsLoading">
+                        @(IsLoading ? "처리 중..." : IsRegisterMode ? "회원가입" : "로그인")
+                    </button>
+
+                    @if (!string.IsNullOrEmpty(ErrorMessage))
+                    {
+                        <div class="error-message">
+                            @ErrorMessage
+                        </div>
+                    }
+                </div>
+            </div>
+        }
 
         <div class="login-features">
-            <h3>What You Can Do</h3>
+            <h3>무엇을 할 수 있나요?</h3>
             <ul class="feature-list">
-                <li>⛏️ Manage dungeons and mercenaries</li>
-                <li>🔨 Craft powerful equipment</li>
-                <li>💼 Run your personal shop</li>
-                <li>📈 Trade on the player exchange</li>
-                <li>⚔️ Build and strengthen your team</li>
-                <li>💰 Accumulate wealth and power</li>
+                <li>⛏️ 던전을 탐험하고 용병을 관리하세요</li>
+                <li>🔨 강력한 장비를 제작하세요</li>
+                <li>💼 개인 상점을 운영하세요</li>
+                <li>📈 플레이어 거래소에서 거래하세요</li>
+                <li>⚔️ 팀을 구축하고 강화하세요</li>
+                <li>💰 부와 권력을 쌓으세요</li>
             </ul>
         </div>
 
         <div class="login-footer">
             <p class="version">Version 1.0.0</p>
-            <p class="privacy">Your data is stored securely with PlayFab</p>
+            <p class="privacy">PlayFab을 통해 안전하게 데이터가 저장됩니다</p>
         </div>
     </div>
 
@@ -90,55 +148,16 @@
         animation: float infinite ease-in-out;
     }
 
-    .float-item.item-1 {
-        top: 10%;
-        left: 10%;
-        animation-duration: 6s;
-        animation-delay: 0s;
-    }
-
-    .float-item.item-2 {
-        top: 20%;
-        right: 15%;
-        animation-duration: 7s;
-        animation-delay: 1s;
-    }
-
-    .float-item.item-3 {
-        bottom: 20%;
-        left: 20%;
-        animation-duration: 8s;
-        animation-delay: 2s;
-    }
-
-    .float-item.item-4 {
-        top: 30%;
-        right: 5%;
-        animation-duration: 9s;
-        animation-delay: 0.5s;
-    }
-
-    .float-item.item-5 {
-        bottom: 30%;
-        right: 20%;
-        animation-duration: 10s;
-        animation-delay: 1.5s;
-    }
-
-    .float-item.item-6 {
-        top: 50%;
-        left: 5%;
-        animation-duration: 7.5s;
-        animation-delay: 2.5s;
-    }
+    .float-item.item-1 { top: 10%; left: 10%; animation-duration: 6s; }
+    .float-item.item-2 { top: 20%; right: 15%; animation-duration: 7s; animation-delay: 1s; }
+    .float-item.item-3 { bottom: 20%; left: 20%; animation-duration: 8s; animation-delay: 2s; }
+    .float-item.item-4 { top: 30%; right: 5%; animation-duration: 9s; animation-delay: 0.5s; }
+    .float-item.item-5 { bottom: 30%; right: 20%; animation-duration: 10s; animation-delay: 1.5s; }
+    .float-item.item-6 { top: 50%; left: 5%; animation-duration: 7.5s; animation-delay: 2.5s; }
 
     @@keyframes float {
-        0%, 100% {
-            transform: translateY(0px) translateX(0px);
-        }
-        50% {
-            transform: translateY(-30px) translateX(20px);
-        }
+        0%, 100% { transform: translateY(0px) translateX(0px); }
+        50% { transform: translateY(-30px) translateX(20px); }
     }
 
     .login-box {
@@ -150,6 +169,8 @@
         width: 100%;
         z-index: 10;
         position: relative;
+        max-height: 90vh;
+        overflow-y: auto;
     }
 
     .login-header {
@@ -159,7 +180,7 @@
 
     .login-header h1 {
         margin: 0 0 0.5rem 0;
-        font-size: 2rem;
+        font-size: 1.8rem;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
@@ -170,6 +191,77 @@
         margin: 0;
         color: #666;
         font-size: 0.95rem;
+    }
+
+    .mode-switch {
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .mode-btn {
+        background: #f8f9fa;
+        border: 1px solid #ddd;
+        padding: 0.5rem 1.5rem;
+        border-radius: 2rem;
+        cursor: pointer;
+        font-size: 0.875rem;
+        color: #666;
+        transition: all 0.2s;
+    }
+
+    .mode-btn:hover {
+        background: #e9ecef;
+        color: #333;
+    }
+
+    .guest-info {
+        background: #e7f3ff;
+        border: 1px solid #b3d9ff;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .guest-info h3 {
+        margin: 0 0 0.75rem 0;
+        font-size: 1rem;
+        color: #0056b3;
+    }
+
+    .guest-info p {
+        margin: 0 0 0.5rem 0;
+        font-size: 0.875rem;
+        color: #666;
+        line-height: 1.5;
+    }
+
+    .guest-info .warning {
+        color: #856404;
+        font-weight: 600;
+    }
+
+    .login-tabs {
+        display: flex;
+        gap: 0;
+        margin-bottom: 2rem;
+        border-bottom: 2px solid #eee;
+    }
+
+    .tab {
+        flex: 1;
+        padding: 0.75rem;
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
+        cursor: pointer;
+        font-weight: 600;
+        color: #999;
+        transition: all 0.2s;
+    }
+
+    .tab.active {
+        color: #667eea;
+        border-bottom-color: #667eea;
     }
 
     .login-form {
@@ -204,10 +296,9 @@
         box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
     }
 
-    .btn-login {
+    .btn {
         width: 100%;
         padding: 1rem;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         border: none;
         border-radius: 0.5rem;
@@ -217,12 +308,20 @@
         transition: all 0.3s;
     }
 
-    .btn-login:hover:not(:disabled) {
+    .btn-login {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .btn-guest {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    }
+
+    .btn:hover:not(:disabled) {
         transform: translateY(-2px);
         box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
     }
 
-    .btn-login:disabled {
+    .btn:disabled {
         opacity: 0.6;
         cursor: not-allowed;
     }
@@ -234,7 +333,7 @@
         color: #721c24;
         border: 1px solid #f5c6cb;
         border-radius: 0.5rem;
-        font-size: 0.95rem;
+        font-size: 0.875rem;
     }
 
     .login-features {
@@ -252,14 +351,14 @@
 
     .feature-list {
         margin: 0;
-        padding-left: 1.5rem;
+        padding-left: 0;
         list-style: none;
     }
 
     .feature-list li {
         padding: 0.5rem 0;
         color: #666;
-        font-size: 0.95rem;
+        font-size: 0.9rem;
     }
 
     .login-footer {
@@ -268,14 +367,8 @@
         padding-top: 1rem;
     }
 
-    .version {
-        margin: 0 0 0.25rem 0;
-        font-size: 0.75rem;
-        color: #999;
-    }
-
-    .privacy {
-        margin: 0;
+    .version, .privacy {
+        margin: 0.25rem 0;
         font-size: 0.75rem;
         color: #999;
     }
@@ -285,11 +378,9 @@
             margin: 1rem;
             padding: 2rem 1.5rem;
         }
-
         .login-header h1 {
             font-size: 1.5rem;
         }
-
         .float-item {
             font-size: 3rem;
         }
@@ -297,43 +388,39 @@
 </style>
 
 @code {
+    private bool IsGuestMode = true;
+    private bool IsRegisterMode = false;
     private string Username = "";
     private string Email = "";
+    private string Password = "";
+    private string PasswordConfirm = "";
     private bool IsLoading = false;
     private string ErrorMessage = "";
 
     protected override async Task OnInitializedAsync()
     {
-        // If already logged in, redirect to dashboard
         if (GameState.IsInitialized)
         {
             Navigation.NavigateTo("/");
         }
     }
 
-    private async Task LoginAsync()
+    private async Task LoginAsGuest()
     {
-        if (string.IsNullOrWhiteSpace(Username))
-        {
-            ErrorMessage = "Please enter a username";
-            return;
-        }
-
         IsLoading = true;
         ErrorMessage = "";
 
         try
         {
-            // Initialize game with username
-            await GameState.InitializeAsync();
+            var deviceId = GetOrCreateDeviceId();
+            var playerId = await PlayFabService.LoginAsGuestAsync(deviceId);
             
-            // Navigate to dashboard
+            await GameState.InitializeAsync();
             Navigation.NavigateTo("/");
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Login failed: {ex.Message}";
-            Console.Error.WriteLine($"Login error: {ex}");
+            ErrorMessage = $"게스트 로그인 실패: {ex.Message}";
         }
         finally
         {
@@ -341,8 +428,105 @@
         }
     }
 
-    async ValueTask IAsyncDisposable.DisposeAsync()
+    private async Task LoginOrRegister()
     {
-        // Cleanup if needed
+        if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Password))
+        {
+            ErrorMessage = "이메일과 비밀번호를 입력하세요";
+            return;
+        }
+
+        if (IsRegisterMode)
+        {
+            if (string.IsNullOrWhiteSpace(Username))
+            {
+                ErrorMessage = "사용자명을 입력하세요";
+                return;
+            }
+
+            if (Password != PasswordConfirm)
+            {
+                ErrorMessage = "비밀번호가 일치하지 않습니다";
+                return;
+            }
+
+            await Register();
+        }
+        else
+        {
+            await PerformLoginAsync();
+        }
     }
+
+    private async Task PerformLoginAsync()
+    {
+        IsLoading = true;
+        ErrorMessage = "";
+
+        try
+        {
+            var playerId = await PlayFabService.LoginWithEmailAsync(Email, Password);
+            await GameState.InitializeAsync();
+            Navigation.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Login error: {ex}");
+            ErrorMessage = $"로그인 실패: 이메일 또는 비밀번호를 확인하세요";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task Register()
+    {
+        IsLoading = true;
+        ErrorMessage = "";
+
+        try
+        {
+            var playerId = await PlayFabService.RegisterWithEmailAsync(Email, Password, Username);
+            await GameState.InitializeAsync();
+            Navigation.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Register error: {ex}");
+            ErrorMessage = $"회원가입 실패: 이미 존재하는 이메일일 수 있습니다";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private string GetOrCreateDeviceId()
+    {
+        try
+        {
+            var deviceId = JSRuntime.InvokeAsync<string>("ShopOwnerSimulator.getLocalStorage", "deviceId").Result;
+            if (string.IsNullOrEmpty(deviceId))
+            {
+                deviceId = Guid.NewGuid().ToString();
+                JSRuntime.InvokeVoidAsync("ShopOwnerSimulator.setLocalStorage", "deviceId", deviceId);
+            }
+            return deviceId;
+        }
+        catch
+        {
+            return Guid.NewGuid().ToString();
+        }
+    }
+
+    private void OnPasswordKeyUp(KeyboardEventArgs e)
+    {
+        if (e?.Key == "Enter")
+        {
+            _ = LoginOrRegister();
+        }
+    }
+
+    async ValueTask IAsyncDisposable.DisposeAsync() { }
 }

@@ -7,17 +7,17 @@
 @inject GameState GameState
 @inject IExchangeService ExchangeService
 
-<PageTitle>Exchange - Shop Owner Simulator</PageTitle>
+<PageTitle>거래소 - 상점주인 시뮬레이터</PageTitle>
 
 <div class="exchange-container">
-    <h1>Player Exchange</h1>
+    <h1>플레이어 거래소</h1>
 
     <div class="exchange-content">
         <!-- Orders List -->
         <div class="orders-panel">
-            <h2>Available Orders</h2>
+            <h2>거래 가능한 주문</h2>
             <div class="filters">
-                <input type="text" class="search-input" placeholder="Search items..." @oninput="e => FilterItems(e.Value.ToString())">
+                <input type="text" class="search-input" placeholder="아이템 검색..." @oninput="e => FilterItems(e.Value.ToString())">
             </div>
             <div class="orders-list">
                 @if (FilteredOrders != null && FilteredOrders.Count > 0)
@@ -26,27 +26,27 @@
                     {
                         <div class="order-card">
                             <div class="order-header">
-                                <h3>@GetItemName(order.ItemTemplateId)</h3>
+                                <h3>@order.ItemTemplateId</h3>
                                 <span class="price">@order.UnitPrice G</span>
                             </div>
                             <div class="order-details">
                                 <div class="detail-row">
-                                    <span>Available</span>
+                                    <span>재고</span>
                                     <span class="value">@order.Remaining/@order.Quantity</span>
                                 </div>
                                 <div class="detail-row">
-                                    <span>Seller</span>
-                                    <span class="value">@order.SellerId?.Substring(0, 8)...</span>
+                                    <span>판매자</span>
+                                    <span class="value">@order.SellerId.Substring(0, 8)...</span>
                                 </div>
                                 <div class="detail-row">
-                                    <span>Listed</span>
+                                    <span>등록일</span>
                                     <span class="value">@order.ListedTime.ToString("MMM dd, HH:mm")</span>
                                 </div>
                             </div>
                             <div class="buy-section">
-                                <input type="number" min="1" @bind="BuyQuantity" class="qty-input" placeholder="Qty">
+                                <input type="number" min="1" @bind="BuyQuantity" class="qty-input" placeholder="수량">
                                 <button class="btn btn-primary" @onclick="() => BuyOrder(order)">
-                                    Buy @(BuyQuantity * order.UnitPrice) G
+                                    구매 @(BuyQuantity * order.UnitPrice) G
                                 </button>
                             </div>
                         </div>
@@ -54,39 +54,39 @@
                 }
                 else
                 {
-                    <p class="empty">No orders available</p>
+                    <p class="empty">주문이 없습니다</p>
                 }
             </div>
         </div>
 
         <!-- My Orders -->
         <div class="my-orders-panel">
-            <h2>My Orders</h2>
+            <h2>내 주문</h2>
             <div class="my-orders-list">
                 @if (MyOrders != null && MyOrders.Count > 0)
                 {
                     @foreach (var order in MyOrders)
                     {
-                        <div class="my-order-card @(order.Status == OrderStatus.Completed ? "completed" : "")">
+                            <div class="my-order-card @(order.Status == OrderStatus.Completed ? "completed" : "")">
                             <div class="order-info">
-                                <h4>@GetItemName(order.ItemTemplateId)</h4>
+                                <h4>@order.ItemTemplateId</h4>
                                 <div class="order-stat">
-                                    <span>Quantity:</span>
+                                    <span>수량:</span>
                                     <span class="value">@order.Remaining/@order.Quantity</span>
                                 </div>
                                 <div class="order-stat">
-                                    <span>Unit Price:</span>
+                                    <span>단가:</span>
                                     <span class="value">@order.UnitPrice G</span>
                                 </div>
                                 <div class="order-stat">
-                                    <span>Status:</span>
-                                    <span class="status-badge @(order.Status.ToString().ToLowerInvariant())">@order.Status</span>
+                                    <span>상태:</span>
+                                    <span class="status-badge @order.Status.ToString().ToLower()">@order.Status.ToString()</span>
                                 </div>
                             </div>
                             @if (order.Status == OrderStatus.Active)
                             {
                                 <button class="btn btn-danger" @onclick="() => CancelOrder(order.Id)">
-                                    Cancel
+                                    취소
                                 </button>
                             }
                         </div>
@@ -94,16 +94,16 @@
                 }
                 else
                 {
-                    <p class="empty">No active orders</p>
+                    <p class="empty">활성화된 주문이 없습니다</p>
                 }
             </div>
 
-            <h2 style="margin-top: 2rem;">List New Item</h2>
+            <h2 style="margin-top: 2rem;">새 아이템 등록</h2>
             <div class="list-form">
                 <div class="form-group">
-                    <label>Select Item</label>
+                    <label>아이템 선택</label>
                     <select @onchange="e => ListItemId = e.Value.ToString()" class="form-control">
-                        <option value="">Choose item...</option>
+                        <option value="">아이템 선택...</option>
                         @if (GameState.Inventory != null)
                         {
                             @foreach (var item in GameState.Inventory.Where(i => !i.IsEquipped))
@@ -114,15 +114,15 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Quantity</label>
+                    <label>수량</label>
                     <input type="number" min="1" @bind="ListQuantity" class="form-control">
                 </div>
                 <div class="form-group">
-                    <label>Price per Unit</label>
+                    <label>단가</label>
                     <input type="number" min="1" @bind="ListPrice" class="form-control">
                 </div>
                 <button class="btn btn-primary" @onclick="ListItem" disabled="@(string.IsNullOrEmpty(ListItemId))">
-                    List Item
+                    등록하기
                 </button>
             </div>
         </div>
@@ -393,22 +393,9 @@
     private void FilterItems(string search)
     {
         if (string.IsNullOrEmpty(search))
-        {
             FilteredOrders = new List<ExchangeOrder>(AllOrders);
-            return;
-        }
-
-        // Search by item template id for now (ItemName requires item templates lookup)
-        FilteredOrders = AllOrders
-            .Where(o => o.ItemTemplateId?.Contains(search, StringComparison.OrdinalIgnoreCase) == true)
-            .ToList();
-    }
-
-    private string GetItemName(string itemTemplateId)
-    {
-        // Fallback: use template id. If a mapping exists in GameState.Inventory or elsewhere, prefer that.
-        // GameState currently doesn't hold ItemTemplate list, so show template id for now.
-        return itemTemplateId ?? string.Empty;
+        else
+            FilteredOrders = AllOrders.Where(o => o.ItemTemplateId.Contains(search, StringComparison.OrdinalIgnoreCase)).ToList();
     }
 
     private async Task BuyOrder(ExchangeOrder order)

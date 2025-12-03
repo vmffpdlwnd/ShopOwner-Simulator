@@ -6,15 +6,15 @@
 @inject GameState GameState
 @inject IPersonalShopService PersonalShopService
 
-<PageTitle>Personal Shop - Shop Owner Simulator</PageTitle>
+<PageTitle>개인상점 - 상점주인 시뮬레이터</PageTitle>
 
 <div class="personal-shop-container">
-    <h1>Personal Shop</h1>
+    <h1>개인 상점</h1>
 
     <div class="shop-content">
         <!-- Active Listings -->
         <div class="listings-panel">
-            <h2>Active Listings</h2>
+            <h2>판매중인 상품</h2>
             <div class="listings-list">
                 @if (ActiveListings != null && ActiveListings.Count > 0)
                 {
@@ -27,43 +27,43 @@
                             </div>
                             <div class="listing-details">
                                 <div class="detail-row">
-                                    <span>Quantity</span>
+                                    <span>수량</span>
                                     <span class="value">@listing.Quantity</span>
                                 </div>
                                 <div class="detail-row">
-                                    <span>Total Value</span>
+                                    <span>총 가격</span>
                                     <span class="value">@listing.TotalGoldOnSale G</span>
                                 </div>
                                 <div class="detail-row">
-                                    <span>Listed</span>
+                                    <span>등록일</span>
                                     <span class="value">@listing.ListedTime.ToString("MMM dd HH:mm")</span>
                                 </div>
                                 <div class="detail-row">
-                                    <span>Expires</span>
+                                    <span>만료</span>
                                     <Timer EndTime="listing.ExpireTime" />
                                 </div>
                             </div>
                             <button class="btn btn-danger" @onclick="() => CancelListing(listing.Id)">
-                                Cancel
+                                취소
                             </button>
                         </div>
                     }
                 }
                 else
                 {
-                    <p class="empty">No active listings</p>
+                    <p class="empty">판매중인 상품이 없습니다</p>
                 }
             </div>
         </div>
 
         <!-- New Listing Form -->
         <div class="list-form-panel">
-            <h2>Create New Listing</h2>
+            <h2>새 상품 등록</h2>
             <div class="form-section">
                 <div class="form-group">
-                    <label>Select Item</label>
+                    <label>아이템 선택</label>
                     <select @onchange="e => FormItem = e.Value.ToString()" class="form-control">
-                        <option value="">Choose item...</option>
+                        <option value="">아이템 선택...</option>
                         @if (GameState.Inventory != null)
                         {
                             @foreach (var item in GameState.Inventory.Where(i => !i.IsEquipped))
@@ -75,36 +75,36 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Quantity</label>
-                    <input type="number" min="1" @bind="FormQuantity" class="form-control" placeholder="How many?">
+                    <label>수량</label>
+                    <input type="number" min="1" @bind="FormQuantity" class="form-control" placeholder="수량?">
                 </div>
 
                 <div class="form-group">
-                    <label>Price per Unit</label>
+                    <label>단가</label>
                     <div class="price-input">
-                        <input type="number" min="1" @bind="FormPrice" class="form-control" placeholder="Price">
+                        <input type="number" min="1" @bind="FormPrice" class="form-control" placeholder="가격">
                         <span class="currency">G</span>
                     </div>
-                    <small class="calc">Total: @(FormQuantity * FormPrice) G</small>
+                    <small class="calc">총액: @(FormQuantity * FormPrice) G</small>
                 </div>
 
                 <div class="form-group">
-                    <label>Auto-Sell Duration</label>
+                    <label>자동 판매 시간</label>
                     <select @onchange="e => FormExpireHours = int.Parse(e.Value.ToString())" class="form-control">
-                        <option value="1">1 Hour</option>
-                        <option value="6">6 Hours</option>
-                        <option value="12">12 Hours</option>
-                        <option value="24" selected>24 Hours</option>
-                        <option value="48">48 Hours</option>
+                        <option value="1">1시간</option>
+                        <option value="6">6시간</option>
+                        <option value="12">12시간</option>
+                        <option value="24" selected>24시간</option>
+                        <option value="48">48시간</option>
                     </select>
                 </div>
 
                 <button class="btn btn-primary" @onclick="CreateListing" disabled="@(string.IsNullOrEmpty(FormItem))">
-                    Create Listing
+                    상품 등록
                 </button>
             </div>
 
-            <h2 style="margin-top: 2rem;">Sold Items</h2>
+            <h2 style="margin-top: 2rem;">판매 완료</h2>
             <div class="sold-list">
                 @if (SoldListings != null && SoldListings.Count > 0)
                 {
@@ -124,7 +124,7 @@
                 }
                 else
                 {
-                    <p class="empty">No sold items yet</p>
+                    <p class="empty">판매 완료된 아이템이 없습니다</p>
                 }
             </div>
         </div>

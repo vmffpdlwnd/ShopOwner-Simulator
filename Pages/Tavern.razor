@@ -5,42 +5,42 @@
 @inject GameState GameState
 @inject IMercenaryService MercenaryService
 
-<PageTitle>Tavern - Shop Owner Simulator</PageTitle>
+<PageTitle>주점 - 상점주인 시뮬레이터</PageTitle>
 
 <div class="tavern-container">
-    <h1>The Tavern</h1>
-    <p class="subtitle">Hire powerful mercenaries to work for you</p>
+    <h1>주점</h1>
+    <p class="subtitle">강력한 용병을 고용하여 함께 일하세요</p>
 
     <div class="tavern-content">
         <div class="tavern-info">
             <div class="info-card">
-                <h2>Hiring Information</h2>
+                <h2>고용 정보</h2>
                 <div class="info-section">
-                    <h3>Mercenary Base</h3>
+                    <h3>용병 기본사항</h3>
                     <div class="info-text">
-                        <p>A mercenary with full equipment and experience makes for an excellent dungeon explorer.</p>
+                        <p>완벽한 장비와 경험을 갖춘 용병은 훌륭한 던전 탐험가입니다.</p>
                         <ul>
-                            <li>Starting Level: 1</li>
-                            <li>Starting Stats: ATK 10, DEF 5, SPD 10</li>
-                            <li>Equipment Slots: 3</li>
-                            <li>Growth Potential: Unlimited</li>
+                            <li>시작 레벨: 1</li>
+                            <li>시작 능력치: 공격력 10, 방어력 5, 속도 10</li>
+                            <li>장비 슬롯: 3개</li>
+                            <li>성장 가능성: 무제한</li>
                         </ul>
                     </div>
                 </div>
 
                 <div class="info-section">
-                    <h3>Your Mercenaries</h3>
+                    <h3>보유 용병</h3>
                     <div class="mercs-overview">
                         <div class="overview-stat">
-                            <span class="label">Total Hired</span>
+                            <span class="label">총 고용</span>
                             <span class="value">@(GameState.Mercenaries?.Count ?? 0)</span>
                         </div>
                         <div class="overview-stat">
-                            <span class="label">Active</span>
+                            <span class="label">활동중</span>
                             <span class="value">@(GameState.Mercenaries?.Count(m => m.IsActive) ?? 0)</span>
                         </div>
                         <div class="overview-stat">
-                            <span class="label">Average Level</span>
+                            <span class="label">평균 레벨</span>
                             <span class="value">@(GameState.Mercenaries?.Any() == true ? (GameState.Mercenaries.Average(m => m.Level)).ToString("F1") : "0")</span>
                         </div>
                     </div>
@@ -50,25 +50,25 @@
 
         <div class="hire-section">
             <div class="hire-card">
-                <h2>Hire New Mercenary</h2>
+                <h2>새 용병 고용</h2>
                 <div class="hire-details">
                     <div class="cost-display">
-                        <span class="cost-label">Hiring Cost</span>
+                        <span class="cost-label">고용 비용</span>
                         <span class="cost-amount">1,000 G</span>
                     </div>
 
                     <div class="your-gold">
-                        <span class="gold-label">Your Gold</span>
+                        <span class="gold-label">보유 골드</span>
                         <span class="gold-amount">@(GameState.Player?.Gold ?? 0)</span>
                     </div>
 
                     <div class="hire-benefit">
-                        <h3>What You Get</h3>
+                        <h3>제공 혜택</h3>
                         <ul class="benefit-list">
-                            <li>✓ Level 1 Mercenary</li>
-                            <li>✓ 3 Equipment Slots</li>
-                            <li>✓ Access to all Dungeons</li>
-                            <li>✓ Growth through Mining</li>
+                            <li>✓ 레벨 1 용병</li>
+                            <li>✓ 3개의 장비 슬롯</li>
+                            <li>✓ 모든 던전 접근 가능</li>
+                            <li>✓ 채굴을 통한 성장</li>
                         </ul>
                     </div>
                 </div>
@@ -76,12 +76,12 @@
                 <button class="btn btn-hire" 
                     @onclick="HireMercenary"
                     disabled="@((GameState.Player?.Gold ?? 0) < 1000 || IsHiring)">
-                    @(IsHiring ? "Hiring..." : "Hire Mercenary (1000 G)")
+                    @(IsHiring ? "고용중..." : "용병 고용 (1000 G)")
                 </button>
 
                 @if ((GameState.Player?.Gold ?? 0) < 1000)
                 {
-                    <p class="warning">Insufficient gold. Need @(1000 - (GameState.Player?.Gold ?? 0)) more G</p>
+                    <p class="warning">골드가 부족합니다. @(1000 - (GameState.Player?.Gold ?? 0)) G 더 필요합니다</p>
                 }
             </div>
         </div>

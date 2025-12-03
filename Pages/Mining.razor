@@ -8,15 +8,15 @@
 @inject IDungeonService DungeonService
 @inject ITimerService TimerService
 
-<PageTitle>Mining - Shop Owner Simulator</PageTitle>
+<PageTitle>채굴 - 상점주인 시뮬레이터</PageTitle>
 
 <div class="mining-container">
-    <h1>Mining Management</h1>
+    <h1>채굴 관리</h1>
 
     <div class="mining-content">
         <!-- Mercenary List -->
         <div class="mercenary-panel">
-            <h2>Available Mercenaries</h2>
+            <h2>사용 가능한 용병</h2>
             <div class="merc-list">
                 @if (GameState.Mercenaries != null && GameState.Mercenaries.Count > 0)
                 {
@@ -46,18 +46,18 @@
                             @if (merc.CurrentDungeonId != null)
                             {
                                 <div class="merc-status">
-                                    <span class="badge mining-badge">Mining</span>
+                                    <span class="badge mining-badge">채굴중</span>
                                     <Timer EndTime="merc.DungeonEndTime" />
                                 </div>
                                 <button class="btn btn-danger" @onclick="() => AbandonDungeon(merc.Id)">
-                                    Abandon
+                                    포기
                                 </button>
                             }
                             else
                             {
                                 <div class="merc-actions">
                                     <select @onchange="e => SelectedDungeonId = e.Value.ToString()" class="form-control">
-                                        <option value="">Select Dungeon</option>
+                                        <option value="">던전 선택</option>
                                         @foreach (var dungeon in Dungeons)
                                         {
                                             <option value="@dungeon.Id">@dungeon.Name (Lv @dungeon.Level)</option>
@@ -66,7 +66,7 @@
                                     <button class="btn btn-primary" 
                                         @onclick="() => StartDungeon(merc.Id)"
                                         disabled="@string.IsNullOrEmpty(SelectedDungeonId)">
-                                        Start Mining
+                                        채굴 시작
                                     </button>
                                 </div>
                             }
@@ -75,14 +75,14 @@
                 }
                 else
                 {
-                    <p class="empty">No mercenaries available. Hire one in the Tavern.</p>
+                    <p class="empty">사용 가능한 용병이 없습니다. 주점에서 고용하세요.</p>
                 }
             </div>
         </div>
 
         <!-- Dungeon Map -->
         <div class="dungeon-panel">
-            <h2>Dungeons</h2>
+            <h2>던전</h2>
             <div class="dungeon-list">
                 @foreach (var dungeon in Dungeons)
                 {
@@ -90,16 +90,16 @@
                         <h3>@dungeon.Name</h3>
                         <div class="dungeon-info">
                             <div class="info-row">
-                                <span>Level Requirement</span>
+                                <span>필요 레벨</span>
                                 <span class="value">@dungeon.Level</span>
                             </div>
                             <div class="info-row">
-                                <span>Base Time</span>
-                                <span class="value">@dungeon.BaseRewardTime seconds</span>
+                                <span>기본 시간</span>
+                                <span class="value">@dungeon.BaseRewardTime 초</span>
                             </div>
                             <div class="info-row">
-                                <span>Rewards</span>
-                                <span class="value">Materials + Rare Items</span>
+                                <span>보상</span>
+                                <span class="value">재료 + 희귀 아이템</span>
                             </div>
                         </div>
                     </div>

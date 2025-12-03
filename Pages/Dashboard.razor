@@ -5,24 +5,24 @@
 @inject GameState GameState
 @inject NavigationManager Navigation
 
-<PageTitle>Dashboard - Shop Owner Simulator</PageTitle>
+<PageTitle>대시보드 - 상점주인 시뮬레이터</PageTitle>
 
 <div class="dashboard-container">
     <div class="dashboard-grid">
         <!-- Settlement Report -->
         <div class="card settlement-card">
-            <h2>Today's Settlement</h2>
+            <h2>오늘의 정산</h2>
             <div class="settlement-details">
                 <div class="stat-row">
-                    <span>Total Gold</span>
+                    <span>총 골드</span>
                     <span class="amount">@GameState.Player?.Gold.ToString("N0")</span>
                 </div>
                 <div class="stat-row">
-                    <span>Today's Earnings</span>
+                    <span>오늘의 수익</span>
                     <span class="amount positive">+@CalculateTodayEarnings().ToString("N0")</span>
                 </div>
                 <div class="stat-row">
-                    <span>Level</span>
+                    <span>레벨</span>
                     <span>@GameState.Player?.Level</span>
                 </div>
             </div>
@@ -30,7 +30,7 @@
 
         <!-- Hot Items -->
         <div class="card hot-items-card">
-            <h2>🔥 Trending Items</h2>
+            <h2>🔥 인기 아이템</h2>
             <div class="items-list">
                 @foreach (var item in GetTrendingItems())
                 {
@@ -44,7 +44,7 @@
 
         <!-- Mercenary Status -->
         <div class="card mercenary-card">
-            <h2>Mercenary Status</h2>
+            <h2>용병 상태</h2>
             <div class="mercenary-list">
                 @if (GameState.Mercenaries != null && GameState.Mercenaries.Count > 0)
                 {
@@ -53,19 +53,19 @@
                         <div class="merc-item">
                             <div class="merc-info">
                                 <div class="merc-name">@merc.Name</div>
-                                <div class="merc-level">Level @merc.Level</div>
+                                <div class="merc-level">레벨 @merc.Level</div>
                             </div>
                             @if (merc.CurrentDungeonId != null)
                             {
                                 <div class="merc-status">
-                                    <span class="status-badge mining">Mining...</span>
+                                    <span class="status-badge mining">채굴중...</span>
                                     <Timer EndTime="merc.DungeonEndTime" />
                                 </div>
                             }
                             else
                             {
                                 <div class="merc-status">
-                                    <span class="status-badge idle">Idle</span>
+                                    <span class="status-badge idle">대기중</span>
                                 </div>
                             }
                         </div>
@@ -73,37 +73,37 @@
                 }
                 else
                 {
-                    <p class="empty-state">No mercenaries yet</p>
+                    <p class="empty-state">아직 용병이 없습니다</p>
                 }
             </div>
         </div>
 
         <!-- Quick Actions -->
         <div class="card actions-card">
-            <h2>Quick Actions</h2>
+            <h2>빠른 작업</h2>
             <div class="actions-grid">
-                <button class="action-btn" @onclick="GoToMining">
+                <button class="action-btn" @onclick='() => Navigation.NavigateTo("/mining")'>
                     <span class="icon">⛏️</span>
-                    <span>Start Mining</span>
+                    <span>채굴 시작</span>
                 </button>
-                <button class="action-btn" @onclick="GoToCrafting">
+                <button class="action-btn" @onclick='() => Navigation.NavigateTo("/crafting")'>
                     <span class="icon">🔨</span>
-                    <span>Craft Item</span>
+                    <span>아이템 제작</span>
                 </button>
-                <button class="action-btn" @onclick="GoToExchange">
+                <button class="action-btn" @onclick='() => Navigation.NavigateTo("/exchange")'>
                     <span class="icon">📈</span>
-                    <span>Check Exchange</span>
+                    <span>거래소 확인</span>
                 </button>
-                <button class="action-btn" @onclick="GoToMercenary">
+                <button class="action-btn" @onclick='() => Navigation.NavigateTo("/mercenary")'>
                     <span class="icon">⚔️</span>
-                    <span>Hire Mercenary</span>
+                    <span>용병 고용</span>
                 </button>
             </div>
         </div>
 
         <!-- Inventory Preview -->
         <div class="card inventory-card">
-            <h2>Inventory</h2>
+            <h2>인벤토리</h2>
             <div class="inventory-preview">
                 @if (GameState.Inventory != null && GameState.Inventory.Count > 0)
                 {
@@ -117,13 +117,13 @@
                     @if (GameState.Inventory.Count > 5)
                     {
                         <div class="inv-more">
-                            +@(GameState.Inventory.Count - 5) more items
+                            +@(GameState.Inventory.Count - 5)개 더보기
                         </div>
                     }
                 }
                 else
                 {
-                    <p class="empty-state">Empty inventory</p>
+                    <p class="empty-state">인벤토리가 비어있습니다</p>
                 }
             </div>
         </div>
@@ -341,10 +341,10 @@
     {
         return new()
         {
-            ("Iron Ore", 15),
-            ("Wood", 8),
-            ("Iron Sword", 22),
-            ("Leather Armor", 5)
+            ("철광석", 15),
+            ("목재", 8),
+            ("철 검", 22),
+            ("가죽 갑옷", 5)
         };
     }
 
@@ -352,9 +352,4 @@
     {
         GameState.OnStateChanged -= StateHasChanged;
     }
-
-    private void GoToMining() => Navigation.NavigateTo("/mining");
-    private void GoToCrafting() => Navigation.NavigateTo("/crafting");
-    private void GoToExchange() => Navigation.NavigateTo("/exchange");
-    private void GoToMercenary() => Navigation.NavigateTo("/mercenary");
 }

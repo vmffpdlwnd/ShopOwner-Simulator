@@ -5,22 +5,22 @@
 @inject GameState GameState
 @inject IMercenaryService MercenaryService
 
-<PageTitle>Mercenary - Shop Owner Simulator</PageTitle>
+<PageTitle>용병 - 상점주인 시뮬레이터</PageTitle>
 
 <div class="mercenary-container">
-    <h1>Mercenary Management</h1>
+    <h1>용병 관리</h1>
 
     <div class="mercenary-content">
         <!-- Mercenary List -->
         <div class="merc-list-panel">
-            <h2>Your Mercenaries</h2>
+            <h2>보유 용병</h2>
             <div class="merc-list">
                 @if (GameState.Mercenaries != null && GameState.Mercenaries.Count > 0)
                 {
                     @foreach (var merc in GameState.Mercenaries)
                     {
                         <div class="merc-item @(SelectedMercenaryId == merc.Id ? "selected" : "")" 
-                            @onclick="@(() => SelectMercenary(merc.Id))">
+                            @onclick="() => SelectMercenary(merc.Id)">
                             <div class="merc-header">
                                 <h3>@merc.Name</h3>
                                 <span class="level-badge">Lv @merc.Level</span>
@@ -41,7 +41,7 @@
                 }
                 else
                 {
-                    <p class="empty">No mercenaries yet</p>
+                    <p class="empty">아직 용병이 없습니다</p>
                 }
             </div>
         </div>
@@ -50,35 +50,35 @@
         <div class="merc-details-panel">
             @if (!string.IsNullOrEmpty(SelectedMercenaryId) && SelectedMercenary != null)
             {
-                <h2>Mercenary Details</h2>
+                <h2>용병 상세정보</h2>
                 <div class="details-card">
                     <div class="detail-header">
                         <h3>@SelectedMercenary.Name</h3>
-                        <span class="level-badge large">Level @SelectedMercenary.Level</span>
+                        <span class="level-badge large">레벨 @SelectedMercenary.Level</span>
                     </div>
 
                     <!-- Stats -->
                     <div class="stats-section">
-                        <h4>Stats</h4>
+                        <h4>능력치</h4>
                         <div class="stats-grid">
                             <div class="stat-box">
-                                <span class="stat-label">Attack</span>
+                                <span class="stat-label">공격력</span>
                                 <div class="stat-bar">
-                                    <div class="stat-fill" style="@($"width: {SelectedMercenary.Stats.Attack * 2}%")"></div>
+                                    <div class="stat-fill" style="width: @(SelectedMercenary.Stats.Attack * 2)%"></div>
                                 </div>
                                 <span class="stat-value">@SelectedMercenary.Stats.Attack</span>
                             </div>
                             <div class="stat-box">
-                                <span class="stat-label">Defense</span>
+                                <span class="stat-label">방어력</span>
                                 <div class="stat-bar">
-                                    <div class="stat-fill" style="@($"width: {SelectedMercenary.Stats.Defense * 3}%")"></div>
+                                    <div class="stat-fill" style="width: @(SelectedMercenary.Stats.Defense * 3)%"></div>
                                 </div>
                                 <span class="stat-value">@SelectedMercenary.Stats.Defense</span>
                             </div>
                             <div class="stat-box">
-                                <span class="stat-label">Speed</span>
+                                <span class="stat-label">속도</span>
                                 <div class="stat-bar">
-                                    <div class="stat-fill" style="@($"width: {SelectedMercenary.Stats.Speed * 2}%")"></div>
+                                    <div class="stat-fill" style="width: @(SelectedMercenary.Stats.Speed * 2)%"></div>
                                 </div>
                                 <span class="stat-value">@SelectedMercenary.Stats.Speed</span>
                             </div>
@@ -87,37 +87,37 @@
 
                     <!-- Experience -->
                     <div class="exp-section">
-                        <h4>Experience</h4>
+                        <h4>경험치</h4>
                         <div class="exp-bar">
-                            <div class="exp-fill" style="@($"width: {(SelectedMercenary.Experience % 1000) / 10}%")"></div>
+                            <div class="exp-fill" style="width: @((SelectedMercenary.Experience % 1000) / 10)%"></div>
                         </div>
                         <div class="exp-text">@SelectedMercenary.Experience / 1000</div>
                     </div>
 
                     <!-- Equipment -->
                     <div class="equipment-section">
-                        <h4>Equipment (@SelectedMercenary.EquipmentInventory.Count slots used)</h4>
+                        <h4>장비 (@SelectedMercenary.EquipmentInventory.Count 슬롯 사용중)</h4>
                         <div class="equipment-list">
                             @if (SelectedMercenary.EquipmentInventory != null && SelectedMercenary.EquipmentInventory.Count > 0)
                             {
                                 @foreach (var slot in SelectedMercenary.EquipmentInventory)
                                 {
                                     <div class="equipment-item">
-                                        <span class="slot-num">Slot @(slot.Key + 1)</span>
+                                        <span class="slot-num">슬롯 @(slot.Key + 1)</span>
                                         <span class="equipment-name">@slot.Value</span>
-                                        <button class="btn btn-sm btn-danger" @onclick="@(() => UnequipItem(slot.Key))">
-                                            Remove
+                                        <button class="btn btn-sm btn-danger" @onclick="() => UnequipItem(slot.Key)">
+                                            제거
                                         </button>
                                     </div>
                                 }
                             }
                             else
                             {
-                                <p class="empty-slot">No equipment equipped</p>
+                                <p class="empty-slot">장착된 장비가 없습니다</p>
                             }
                         </div>
 
-                        <h4 style="margin-top: 1rem;">Available Equipment</h4>
+                        <h4 style="margin-top: 1rem;">사용가능 장비</h4>
                         <div class="available-equipment">
                             @if (AvailableEquipment != null && AvailableEquipment.Count > 0)
                             {
@@ -125,15 +125,15 @@
                                 {
                                     <div class="equip-option">
                                         <span>@item.ItemTemplateId</span>
-                                        <button class="btn btn-sm btn-primary" @onclick="@(() => EquipItem(item.Id))">
-                                            Equip
+                                        <button class="btn btn-sm btn-primary" @onclick="() => EquipItem(item.Id)">
+                                            장착
                                         </button>
                                     </div>
                                 }
                             }
                             else
                             {
-                                <p class="empty-slot">No equipment available</p>
+                                <p class="empty-slot">사용가능한 장비가 없습니다</p>
                             }
                         </div>
                     </div>
@@ -142,7 +142,7 @@
             else
             {
                 <div class="no-selection">
-                    <p>Select a mercenary to view details</p>
+                    <p>용병을 선택하여 상세정보를 확인하세요</p>
                 </div>
             }
         </div>

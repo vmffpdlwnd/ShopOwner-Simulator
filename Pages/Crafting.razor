@@ -6,26 +6,26 @@
 @inject GameState GameState
 @inject ICraftingService CraftingService
 
-<PageTitle>Crafting - Shop Owner Simulator</PageTitle>
+<PageTitle>제작 - 상점주인 시뮬레이터</PageTitle>
 
 <div class="crafting-container">
-    <h1>Crafting Studio</h1>
+    <h1>제작소</h1>
 
     <div class="crafting-content">
         <!-- Recipe List -->
         <div class="recipe-panel">
-            <h2>Recipes</h2>
+            <h2>레시피</h2>
             <div class="recipe-list">
                 @if (Recipes != null && Recipes.Count > 0)
                 {
                     @foreach (var recipe in Recipes)
                     {
                         <div class="recipe-card @(SelectedRecipe?.Id == recipe.Id ? "selected" : "")"
-                            @onclick="@(() => SelectRecipe(recipe))">
+                            @onclick="() => SelectRecipe(recipe)">
                             <h3>@recipe.Name</h3>
                             <div class="recipe-info">
                                 <div class="info-section">
-                                    <span class="label">Required Materials:</span>
+                                    <span class="label">필요 재료:</span>
                                     @foreach (var req in recipe.RequiredItems)
                                     {
                                         <div class="material-item">
@@ -35,30 +35,30 @@
                                     }
                                 </div>
                                 <div class="info-section">
-                                    <span class="label">Output:</span>
+                                    <span class="label">결과물:</span>
                                     <div class="output-item">
                                         <span>@recipe.OutputItem</span>
                                         <span class="qty">x@recipe.OutputQuantity</span>
                                     </div>
                                 </div>
                             </div>
-                            <button class="btn btn-primary" @onclick="@(() => CraftItem(recipe))" 
+                            <button class="btn btn-primary" @onclick="() => CraftItem(recipe)" 
                                 disabled="@(!recipe.CanCraft)">
-                                @(recipe.CanCraft ? "Craft" : "Not Enough Materials")
+                                @(recipe.CanCraft ? "제작" : "재료 부족")
                             </button>
                         </div>
                     }
                 }
                 else
                 {
-                    <p class="empty">Loading recipes...</p>
+                    <p class="empty">레시피 로딩중...</p>
                 }
             </div>
         </div>
 
         <!-- Inventory Panel -->
         <div class="inventory-panel">
-            <h2>Materials</h2>
+            <h2>재료</h2>
             <div class="materials-list">
                 @if (GameState.Inventory != null && GameState.Inventory.Count > 0)
                 {
@@ -67,7 +67,7 @@
                         <div class="material-card">
                             <div class="material-name">@item.ItemTemplateId</div>
                             <div class="material-qty">
-                                <span class="qty-label">Quantity:</span>
+                                <span class="qty-label">수량:</span>
                                 <span class="qty-value">@item.Quantity</span>
                             </div>
                         </div>
@@ -75,11 +75,11 @@
                 }
                 else
                 {
-                    <p class="empty">No materials in inventory</p>
+                    <p class="empty">인벤토리에 재료가 없습니다</p>
                 }
             </div>
 
-            <h2 style="margin-top: 2rem;">Crafting Queue</h2>
+            <h2 style="margin-top: 2rem;">제작 대기열</h2>
             <div class="queue-list">
                 @if (CraftedItems != null && CraftedItems.Count > 0)
                 {
@@ -88,13 +88,13 @@
                         <div class="queue-item">
                             <span class="item-name">@item.ItemName</span>
                             <span class="item-qty">x@item.Quantity</span>
-                            <span class="status-badge">✓ Completed</span>
+                            <span class="status-badge">✓ 완료</span>
                         </div>
                     }
                 }
                 else
                 {
-                    <p class="empty">No crafted items yet</p>
+                    <p class="empty">제작된 아이템이 없습니다</p>
                 }
             </div>
         </div>
@@ -297,7 +297,7 @@
 
 @code {
     private List<RecipeDTO> Recipes = new();
-    private RecipeDTO? SelectedRecipe = null;
+    private RecipeDTO SelectedRecipe = null;
     private List<(string ItemName, int Quantity)> CraftedItems = new();
 
     protected override async Task OnInitializedAsync()
@@ -352,7 +352,7 @@
         }
     }
 
-    private bool CheckCanCraft(Recipe recipe)
+    private bool CheckCanCraft(ShopOwnerSimulator.Models.Entities.Recipe recipe)
     {
         foreach (var req in recipe.RequiredItems)
         {
