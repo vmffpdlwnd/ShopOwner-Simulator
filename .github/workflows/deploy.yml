@@ -27,9 +27,6 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore ShopOwner-Simulator.sln
       
-      - name: Build
-        run: dotnet build ShopOwner-Simulator.sln -c Release --no-restore
-      
       - name: Publish
         # NOTE: Do NOT inject sensitive secrets (like PlayFab secret keys) into a client build
         # that will be served to users. Keep server-only secrets out of client-side builds.
@@ -44,6 +41,28 @@ jobs:
           if [ -z "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" ]; then
             echo "ERROR: Missing secret CLOUDFLARE_ACCOUNT_ID" >&2
             exit 1
+          fi
+          echo "INFO: If CLOUDFLARE_PAGES_PROJECT is not set, the workflow will use the repository name as the Pages project name."
+
+      - name: Prepare Cloudflare Pages project name
+        run: |
+          repo_name="${GITHUB_REPOSITORY##*/}"
+          if [ -n "${{ secrets.CLOUDFLARE_PAGES_PROJECT }}" ]; then
+            echo "Using provided project name from CLOUDFLARE_PAGES_PROJECT"
+            echo "PROJECT_NAME=${{ secrets.CLOUDFLARE_PAGES_PROJECT }}" >> $GITHUB_ENV
+          else
+            echo "CLOUDFLARE_PAGES_PROJECT not set; using repo name '$repo_name' as PROJECT_NAME"
+            echo "PROJECT_NAME=$repo_name" >> $GITHUB_ENV
+          fi
+
+      - name: Upload to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: ${{ env.PROJECT_NAME }}
+          directory: ./publish/wwwroot
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
           fi
           if [ -z "${{ secrets.CLOUDFLARE_PAGES_PROJECT }}" ]; then
             echo "ERROR: Missing secret CLOUDFLARE_PAGES_PROJECT" >&2
