@@ -41,6 +41,11 @@
 </div>
 
 @code {
+    // Explicit parameterless constructor to ensure runtime Activator can instantiate
+    // the component even if a non-default ctor exists elsewhere/was generated.
+    public MainLayout()
+    {
+    }
     protected override async Task OnInitializedAsync()
     {
         // Load game state on layout initialization
