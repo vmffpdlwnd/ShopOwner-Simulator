@@ -27,33 +27,81 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore ShopOwner-Simulator.sln
       
+      - name: Build
+        run: dotnet build ShopOwner-Simulator.sln -c Release --no-restore
+      
       - name: Publish
         # NOTE: Do NOT inject sensitive secrets (like PlayFab secret keys) into a client build
-        # that will be served to users. Keep server-only secrets out of client-side builds.
+        # that will be served to users. PlayFab SecretKey should never be embedded in a
+        # client-side Blazor WebAssembly build. If server-side features need the secret,
+        # keep it only on the server or use serverless/worker endpoints.
+        env:
+          PLAYFAB_TITLE_ID: ${{ secrets.PLAYFAB_TITLE_ID }} # TitleId is not secret and can be provided if needed
         run: dotnet publish ShopOwnerSimulator.csproj -c Release -o publish
 
       - name: Validate Cloudflare secrets
         run: |
           if [ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
             echo "ERROR: Missing secret CLOUDFLARE_API_TOKEN" >&2
+            echo "Create an API token in Cloudflare with Pages permissions and add it to GitHub Secrets." >&2
             exit 1
           fi
           if [ -z "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" ]; then
             echo "ERROR: Missing secret CLOUDFLARE_ACCOUNT_ID" >&2
+            echo "Find your Account ID in the Cloudflare dashboard and add it to GitHub Secrets." >&2
             exit 1
           fi
-          echo "INFO: If CLOUDFLARE_PAGES_PROJECT is not set, the workflow will use the repository name as the Pages project name."
-
+          echo "INFO: If CLOUDFLARE_PAGES_PROJECT is not set, the workflow will attempt to auto-detect the project name."
+      
       - name: Prepare Cloudflare Pages project name
         run: |
-          repo_name="${GITHUB_REPOSITORY##*/}"
-          if [ -n "${{ secrets.CLOUDFLARE_PAGES_PROJECT }}" ]; then
+          set -euo pipefail
+
+          # If secret provided, use it; otherwise try to auto-detect via API
+          PROVIDED_PROJECT='${{ secrets.CLOUDFLARE_PAGES_PROJECT }}'
+
+          if [ -n "$PROVIDED_PROJECT" ]; then
             echo "Using provided project name from CLOUDFLARE_PAGES_PROJECT"
-            echo "PROJECT_NAME=${{ secrets.CLOUDFLARE_PAGES_PROJECT }}" >> $GITHUB_ENV
-          else
-            echo "CLOUDFLARE_PAGES_PROJECT not set; using repo name '$repo_name' as PROJECT_NAME"
-            echo "PROJECT_NAME=$repo_name" >> $GITHUB_ENV
+            echo "PROJECT_NAME=$PROVIDED_PROJECT" >> $GITHUB_ENV
+            exit 0
           fi
+
+          echo "CLOUDFLARE_PAGES_PROJECT not set; attempting auto-detect via Cloudflare API"
+
+          echo "Installing jq for JSON parsing..."
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq jq
+
+          echo "Querying Pages projects for account ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
+          resp=$(curl -s -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CLOUDFLARE_ACCOUNT_ID }}/pages/projects")
+          ok=$(echo "$resp" | jq -r '.success')
+          if [ "$ok" != "true" ]; then
+            echo "ERROR: Failed to list Pages projects" >&2
+            echo "$resp" | jq . >&2 || true
+            exit 1
+          fi
+
+          repo_name="${GITHUB_REPOSITORY##*/}"
+          repo_lc=$(echo "$repo_name" | tr '[:upper:]' '[:lower:]')
+
+          selected=$(echo "$resp" | jq -r '.result[] | .name' | while read -r name; do
+            name_lc=$(echo "$name" | tr '[:upper:]' '[:lower:]')
+            if [ "$name_lc" = "$repo_lc" ] || echo "$name_lc" | grep -q "$repo_lc"; then
+              echo "$name"
+              break
+            fi
+          done)
+
+          if [ -z "$selected" ]; then
+            echo "ERROR: Could not auto-detect a Pages project matching repository name '$repo_name'" >&2
+            echo "Available projects:" >&2
+            echo "$resp" | jq -r '.result[] | " - " + .name' >&2
+            echo "Set the exact project name in the secret CLOUDFLARE_PAGES_PROJECT if auto-detect fails." >&2
+            exit 1
+          fi
+
+          echo "Detected project: $selected"
+          echo "PROJECT_NAME=$selected" >> $GITHUB_ENV
 
       - name: Upload to Cloudflare Pages
         uses: cloudflare/pages-action@v1
@@ -61,20 +109,5 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           projectName: ${{ env.PROJECT_NAME }}
-          directory: ./publish/wwwroot
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-          fi
-          if [ -z "${{ secrets.CLOUDFLARE_PAGES_PROJECT }}" ]; then
-            echo "ERROR: Missing secret CLOUDFLARE_PAGES_PROJECT" >&2
-            echo "Set the exact Cloudflare Pages project name in the secret CLOUDFLARE_PAGES_PROJECT." >&2
-            exit 1
-          fi
-
-      - name: Upload to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: ${{ secrets.CLOUDFLARE_PAGES_PROJECT }}
           directory: ./publish/wwwroot
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
