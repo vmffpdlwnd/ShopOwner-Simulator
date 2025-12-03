@@ -38,7 +38,9 @@ public class InventoryService : IInventoryService
 
         if (existingItem != null)
         {
+            Console.Error.WriteLine($"InventoryService.AddItemAsync: Found existing item Id={existingItem.Id}, Template={existingItem.ItemTemplateId}, QtyBefore={existingItem.Quantity}, Add={quantity}");
             existingItem.Quantity += quantity;
+            Console.Error.WriteLine($"InventoryService.AddItemAsync: Updated QtyAfter={existingItem.Quantity}");
         }
         else
         {
@@ -54,10 +56,12 @@ public class InventoryService : IInventoryService
 
             _stateService.Inventory.Add(newItem);
             await _storage.SetAsync($"inventory_item_{newItem.Id}", newItem);
+            Console.Error.WriteLine($"InventoryService.AddItemAsync: Added newItem Id={newItem.Id}, Template={newItem.ItemTemplateId}, Quantity={newItem.Quantity}");
         }
 
-        await _playFab.UpdateInventoryAsync(playerId, existingItem ?? 
-            _stateService.Inventory.First(i => i.ItemTemplateId == itemTemplateId && i.PlayerId == playerId));
+        var toUpdate = existingItem ?? _stateService.Inventory.First(i => i.ItemTemplateId == itemTemplateId && i.PlayerId == playerId);
+        Console.Error.WriteLine($"InventoryService.AddItemAsync: Updating PlayFab inventory for player={playerId}, itemId={toUpdate.Id}, template={toUpdate.ItemTemplateId}, qty={toUpdate.Quantity}");
+        await _playFab.UpdateInventoryAsync(playerId, toUpdate);
 
         _stateService.NotifyStateChanged();
         return true;
@@ -71,7 +75,9 @@ public class InventoryService : IInventoryService
         if (item == null || item.Quantity < quantity)
             return false;
 
+        Console.Error.WriteLine($"InventoryService.RemoveItemAsync: Removing quantity player={playerId}, itemId={itemId}, template={item.ItemTemplateId}, qtyBefore={item.Quantity}, remove={quantity}");
         item.Quantity -= quantity;
+        Console.Error.WriteLine($"InventoryService.RemoveItemAsync: qtyAfter={item.Quantity}");
 
         if (item.Quantity <= 0)
         {

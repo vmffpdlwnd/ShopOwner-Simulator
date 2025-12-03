@@ -67,10 +67,11 @@ public class ExchangeService : IExchangeService
         };
 
         // Remove from inventory
-        await _inventoryService.RemoveItemAsync(
-            _stateService.CurrentPlayer.Id,
-            request.ItemTemplateId,
-            request.Quantity);
+            // Remove from inventory (use the actual inventory item id)
+            await _inventoryService.RemoveItemAsync(
+                _stateService.CurrentPlayer.Id,
+                inventoryItem.Id,
+                request.Quantity);
 
         _orders.Add(order);
         await _storage.SetAsync($"exchange_order_{order.Id}", order);
@@ -137,6 +138,18 @@ public class ExchangeService : IExchangeService
         _transactions.Add(transaction);
         await _storage.SetAsync($"transaction_{transaction.Id}", transaction);
 
+        // Record transaction in global state for dashboard/analytics
+        try
+        {
+            _stateService.Transactions.Add(transaction);
+            await _storage.SetAsync("transactions", _stateService.Transactions);
+            _stateService.NotifyStateChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"ExchangeService: Failed to record transaction in state: {ex.Message}");
+        }
+
         return transaction;
     }
 
@@ -147,6 +160,17 @@ public class ExchangeService : IExchangeService
 
     public Task<List<ItemTemplate>> GetAvailableItemsAsync()
     {
-        throw new NotImplementedException();
+        // Return simple templates based on configured prices
+        var templates = _itemPrices.Select(kv => new ItemTemplate
+        {
+            Id = kv.Key,
+            Name = ShopOwnerSimulator.Utils.FormatHelper.GetItemDisplayName(kv.Key),
+            BasePrice = kv.Value,
+            Description = ShopOwnerSimulator.Utils.FormatHelper.GetItemDescription(kv.Key),
+            Type = kv.Key.StartsWith("equipment") ? ItemType.Equipment : ItemType.Material,
+            Rarity = ItemRarity.Common
+        }).ToList();
+
+        return Task.FromResult(templates);
     }
 }

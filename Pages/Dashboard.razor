@@ -110,8 +110,8 @@
                     @foreach (var item in GameState.Inventory.Take(5))
                     {
                         <div class="inv-item">
-                            <span class="item-name">@item.ItemTemplateId</span>
-                            <span class="item-qty">x@item.Quantity</span>
+                            <span class="item-name">@ShopOwnerSimulator.Utils.FormatHelper.GetItemDisplayName(item.ItemTemplateId)</span>
+                            <span class="item-qty">x@(item.Quantity)</span>
                         </div>
                     }
                     @if (GameState.Inventory.Count > 5)
@@ -333,8 +333,20 @@
 
     private long CalculateTodayEarnings()
     {
-        // Mock calculation - in real app, fetch from transaction history
-        return 0;
+        try
+        {
+            if (GameState.Player == null || GameState.Transactions == null)
+                return 0;
+
+            var today = DateTime.UtcNow.Date;
+            return GameState.Transactions
+                .Where(t => t.SellerId == GameState.Player.Id && t.TransactionTime.Date == today)
+                .Sum(t => t.TotalGold);
+        }
+        catch
+        {
+            return 0;
+        }
     }
 
     private List<(string Name, int PriceChange)> GetTrendingItems()

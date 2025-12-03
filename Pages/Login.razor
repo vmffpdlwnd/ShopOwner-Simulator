@@ -414,9 +414,38 @@
         try
         {
             var deviceId = GetOrCreateDeviceId();
+            // Try server-side guest login first. If it fails, fall back to local guest.
+            try
+            {
+                var playFabId = await PlayFabService.LoginAsGuestAsync(deviceId);
+                // Initialize game using server player id so data is synced
+                await GameState.InitializeWithPlayerIdAsync(playFabId);
+                Navigation.NavigateTo("/");
+                return;
+            }
+            catch (Exception ex)
+            {
+                    // Log full details (may include PlayFab API JSON payload in InnerException)
+                    Console.Error.WriteLine($"Guest server login failed, falling back to local guest: {ex}");
 
-            // Create a local, ephemeral guest player (no server calls). Data will be kept
-            // only in-memory for this session and reset when the page is reloaded.
+                    // If PlayFab returned a known error, show a friendly message in UI
+                    var inner = ex.InnerException?.Message ?? ex.Message;
+                    if (!string.IsNullOrEmpty(inner) && inner.Contains("PlayerCreationDisabled", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ErrorMessage = "서버에서 새 플레이어 생성을 허용하지 않아 서버 게스트 로그인이 불가합니다. 로컬 게스트로 계속합니다.";
+                    }
+                    else if (!string.IsNullOrEmpty(inner) && inner.Contains("Player creations have been disabled", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ErrorMessage = "서버에서 새 플레이어 생성을 허용하지 않아 서버 게스트 로그인이 불가합니다. 로컬 게스트로 계속합니다.";
+                    }
+                    else
+                    {
+                        // Generic user-friendly hint
+                        ErrorMessage = "서버 게스트 로그인이 실패하여 로컬 게스트로 시작합니다.";
+                    }
+            }
+
+            // Fallback: Create a local, ephemeral guest player (no server calls).
             var guestPlayer = new ShopOwnerSimulator.Models.Entities.Player
             {
                 Id = $"guest_{deviceId}",
@@ -480,7 +509,8 @@
         try
         {
             var playerId = await PlayFabService.LoginWithEmailAsync(Email, Password);
-            await GameState.InitializeAsync();
+            // Initialize using server player id so we load server state
+            await GameState.InitializeWithPlayerIdAsync(playerId);
             Navigation.NavigateTo("/");
         }
         catch (Exception ex)
@@ -501,38 +531,68 @@
 
         try
         {
-            var playerId = await PlayFabService.RegisterWithEmailAsync(Email, Password, Username);
-            await GameState.InitializeAsync();
+            // Generate an internal ASCII-only username to avoid PlayFab username/displayName charset and reuse issues
+            var internalUsername = $"user_{Guid.NewGuid().ToString("N").Substring(0,8)}";
+
+            var playerId = await PlayFabService.RegisterWithEmailAsync(Email, Password, internalUsername);
+            // Set the display name to the user's requested Username (may contain Hangul)
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(Username))
+                {
+                    await PlayFabService.UpdateDisplayNameAsync(Username);
+                }
+            }
+            catch (Exception dnEx)
+            {
+                Console.Error.WriteLine($"Update display name failed: {dnEx}");
+                // Non-fatal: continue even if display name update fails
+            }
+
+            // If registration succeeded, initialize with server player id
+            await GameState.InitializeWithPlayerIdAsync(playerId);
             Navigation.NavigateTo("/");
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Register error: {ex}");
 
-            // Prefer the outer exception message (PlayFabService may provide a localized message)
+            // Prefer the most detailed JSON payload from PlayFab. Try inner exception first, then outer.
             var payload = ex.Message;
+            var jsonCandidate = ex.InnerException?.Message ?? ex.Message;
 
-            // If inner exception contains a JSON payload, try to parse and extract details.
-            var inner = ex.InnerException?.Message;
-            if (!string.IsNullOrEmpty(inner) && inner.TrimStart().StartsWith("{"))
+            if (!string.IsNullOrEmpty(jsonCandidate) && jsonCandidate.TrimStart().StartsWith("{"))
             {
                 try
                 {
-                    using var doc = JsonDocument.Parse(inner);
-                    if (doc.RootElement.TryGetProperty("errorMessage", out var em))
+                    using var doc = JsonDocument.Parse(jsonCandidate);
+
+                    // PlayFab may include an 'error' or 'errorMessage' field, and 'errorDetails' with field-specific messages
+                    if (doc.RootElement.TryGetProperty("errorDetails", out var ed) && ed.ValueKind == JsonValueKind.Object)
                     {
-                        payload = $"회원가입 실패: {em.GetString()}";
+                        if (ed.TryGetProperty("Username", out var u) && u.ValueKind == JsonValueKind.Array && u.GetArrayLength() > 0)
+                        {
+                            payload = u[0].GetString() ?? "사용자 이름을 확인하세요";
+                        }
                     }
-                    else if (doc.RootElement.TryGetProperty("errorDetails", out var ed) && ed.TryGetProperty("Username", out var u))
+
+                    if (string.IsNullOrEmpty(payload) && doc.RootElement.TryGetProperty("errorMessage", out var em))
                     {
-                        if (u.ValueKind == JsonValueKind.Array && u.GetArrayLength() > 0)
-                            payload = $"회원가입 실패: {u[0].GetString()}";
+                        payload = em.GetString() ?? payload;
+                    }
+
+                    if (string.IsNullOrEmpty(payload) && doc.RootElement.TryGetProperty("error", out var e))
+                    {
+                        var err = e.GetString();
+                        if (string.Equals(err, "UsernameNotAvailable", StringComparison.OrdinalIgnoreCase))
+                        {
+                            payload = "사용자 이름이 이미 사용 중입니다.";
+                            // For username conflicts, suggest slight modification? handled by UI later
+                        }
                         else
-                            payload = "회원가입 실패: 입력값을 확인하세요";
-                    }
-                    else
-                    {
-                        payload = "회원가입 실패: 서버 오류가 발생했습니다";
+                        {
+                            payload = err;
+                        }
                     }
                 }
                 catch
@@ -541,13 +601,76 @@
                 }
             }
 
+            if (string.IsNullOrEmpty(payload)) payload = "회원가입 실패: 알 수 없는 오류가 발생했습니다.";
+
+            // If PlayFab disallows player creation, fall back to a local account so user can still play
+            if (jsonCandidate != null && (jsonCandidate.Contains("PlayerCreationDisabled") || jsonCandidate.Contains("Player creations have been disabled")))
+            {
+                // Create a local player with requested username
+                var deviceId = GetOrCreateDeviceId();
+                var localPlayer = new ShopOwnerSimulator.Models.Entities.Player
+                {
+                    Id = $"local_{deviceId}",
+                    Username = Username ?? "로컬플레이어",
+                    Level = 1,
+                    Experience = 0,
+                    Gold = 1000,
+                    Crystal = 0,
+                    CreatedAt = DateTime.UtcNow,
+                    LastLoginAt = DateTime.UtcNow
+                };
+
+                await GameState.InitializeGuestAsync(localPlayer);
+                ErrorMessage = "서버에서 신규 계정 생성을 허용하지 않아 로컬 계정으로 로그인했습니다.";
+                Navigation.NavigateTo("/");
+                IsLoading = false;
+                return;
+            }
+            // If the failure was a username conflict, try automatic alternative names a few times
+            var lowered = jsonCandidate?.ToLowerInvariant() ?? string.Empty;
+            if (lowered.Contains("user name already exists") || payload.Contains("사용자 이름") && payload.Contains("중"))
+            {
+                const int maxAttempts = 5;
+                var baseName = string.IsNullOrWhiteSpace(Username) ? "player" : Username;
+                for (int i = 0; i < maxAttempts; i++)
+                {
+                    var alt = $"{baseName}_{RandomNumber(1000, 9999)}";
+                    ErrorMessage = $"사용자명 '{Username}'은(는) 사용 중입니다. '{alt}'으로 재시도({i+1}/{maxAttempts})...";
+                    try
+                    {
+                        var playerId = await PlayFabService.RegisterWithEmailAsync(Email, Password, alt);
+                        await GameState.InitializeWithPlayerIdAsync(playerId);
+                        Navigation.NavigateTo("/");
+                        IsLoading = false;
+                        return;
+                    }
+                    catch (Exception retryEx)
+                    {
+                        Console.Error.WriteLine($"Retry register with '{alt}' failed: {retryEx}");
+                        // if it's a different error (like PlayerCreationDisabled), break and handle below
+                        var rcandidate = retryEx.InnerException?.Message ?? retryEx.Message;
+                        if (!string.IsNullOrEmpty(rcandidate) && (rcandidate.Contains("PlayerCreationDisabled") || rcandidate.Contains("Player creations have been disabled")))
+                        {
+                            break;
+                        }
+                        // otherwise continue to next alt
+                    }
+                }
+
+                // If all retries failed, set message for user
+                ErrorMessage = "사용자 이름 충돌로 자동 생성 시도 후에도 실패했습니다. 다른 이름을 입력해 주세요.";
+                IsLoading = false;
+                return;
+            }
+
             // Show the best available message to user
-            ErrorMessage = payload;
+            ErrorMessage = payload.StartsWith("회원가입 실패") ? payload : $"회원가입 실패: {payload}";
         }
-        finally
-        {
-            IsLoading = false;
-        }
+    }
+
+    private static int RandomNumber(int min, int max)
+    {
+        return new System.Random().Next(min, max);
     }
 
     private string GetOrCreateDeviceId()

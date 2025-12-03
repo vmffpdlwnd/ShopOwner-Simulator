@@ -62,12 +62,18 @@ public class CraftingService : ICraftingService
         if (recipe == null)
             throw new Exception("Recipe not found");
 
-        // Consume required items
+        // Consume required items (find actual inventory item IDs by template id)
         foreach (var required in recipe.RequiredItems)
         {
+            var invItem = _stateService.Inventory.FirstOrDefault(i => i.ItemTemplateId == required.Key && i.PlayerId == _stateService.CurrentPlayer.Id);
+            if (invItem == null)
+            {
+                throw new Exception($"Cannot craft: missing required item {required.Key}");
+            }
+
             await _inventoryService.RemoveItemAsync(
-                _stateService.CurrentPlayer.Id,
-                required.Key,
+                invItem.PlayerId,
+                invItem.Id,
                 required.Value);
         }
 

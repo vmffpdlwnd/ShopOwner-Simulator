@@ -104,7 +104,7 @@
                                 {
                                     <div class="equipment-item">
                                         <span class="slot-num">슬롯 @(slot.Key + 1)</span>
-                                        <span class="equipment-name">@slot.Value</span>
+                                        <span class="equipment-name">@ShopOwnerSimulator.Utils.FormatHelper.GetItemDisplayName(GameState.Inventory?.FirstOrDefault(i => i.Id == slot.Value)?.ItemTemplateId ?? slot.Value)</span>
                                         <button class="btn btn-sm btn-danger" @onclick="() => UnequipItem(slot.Key)">
                                             제거
                                         </button>
@@ -124,7 +124,7 @@
                                 @foreach (var item in AvailableEquipment)
                                 {
                                     <div class="equip-option">
-                                        <span>@item.ItemTemplateId</span>
+                                        <span>@ShopOwnerSimulator.Utils.FormatHelper.GetItemDisplayName(item.ItemTemplateId)</span>
                                         <button class="btn btn-sm btn-primary" @onclick="() => EquipItem(item.Id)">
                                             장착
                                         </button>

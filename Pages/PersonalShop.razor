@@ -22,7 +22,7 @@
                     {
                         <div class="listing-card">
                             <div class="listing-header">
-                                <h3>@listing.ItemTemplateId</h3>
+                                <h3>@ShopOwnerSimulator.Utils.FormatHelper.GetItemDisplayName(listing.ItemTemplateId)</h3>
                                 <span class="price">@listing.UnitPrice G each</span>
                             </div>
                             <div class="listing-details">
@@ -68,7 +68,7 @@
                         {
                             @foreach (var item in GameState.Inventory.Where(i => !i.IsEquipped))
                             {
-                                <option value="@item.ItemTemplateId">@item.ItemTemplateId (x@item.Quantity)</option>
+                                <option value="@item.ItemTemplateId">@ShopOwnerSimulator.Utils.FormatHelper.GetItemDisplayName(item.ItemTemplateId) (x@(item.Quantity))</option>
                             }
                         }
                     </select>
@@ -112,8 +112,8 @@
                     {
                         <div class="sold-item">
                             <div class="sold-info">
-                                <span class="item-name">@listing.ItemTemplateId</span>
-                                <span class="item-qty">x@listing.Quantity</span>
+                                <span class="item-name">@ShopOwnerSimulator.Utils.FormatHelper.GetItemDisplayName(listing.ItemTemplateId)</span>
+                                <span class="item-qty">x@(listing.Quantity)</span>
                             </div>
                             <div class="sold-value">
                                 <span class="gold-earned">+@listing.TotalGoldOnSale G</span>

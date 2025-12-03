@@ -48,10 +48,10 @@ public class PersonalShopService : IPersonalShopService
             TotalGoldOnSale = request.UnitPrice * request.Quantity
         };
 
-        // Remove from inventory (mark as listed)
+        // Remove from inventory (mark as listed) - use the actual inventory item id
         await _inventoryService.RemoveItemAsync(
             _stateService.CurrentPlayer.Id,
-            request.ItemTemplateId,
+            inventoryItem.Id,
             request.Quantity);
 
         _listings.Add(listing);

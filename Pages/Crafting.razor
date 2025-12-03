@@ -29,16 +29,16 @@
                                     @foreach (var req in recipe.RequiredItems)
                                     {
                                         <div class="material-item">
-                                            <span>@req.Key</span>
-                                            <span class="required">x@req.Value</span>
+                                            <span>@ShopOwnerSimulator.Utils.FormatHelper.GetItemDisplayName(req.Key)</span>
+                                            <span class="required">x@(req.Value)</span>
                                         </div>
                                     }
                                 </div>
                                 <div class="info-section">
                                     <span class="label">결과물:</span>
                                     <div class="output-item">
-                                        <span>@recipe.OutputItem</span>
-                                        <span class="qty">x@recipe.OutputQuantity</span>
+                                        <span>@ShopOwnerSimulator.Utils.FormatHelper.GetItemDisplayName(recipe.OutputItem)</span>
+                                        <span class="qty">x@(recipe.OutputQuantity)</span>
                                     </div>
                                 </div>
                             </div>
@@ -65,7 +65,7 @@
                     @foreach (var item in GameState.Inventory.Where(i => !i.IsEquipped))
                     {
                         <div class="material-card">
-                            <div class="material-name">@item.ItemTemplateId</div>
+                            <div class="material-name">@ShopOwnerSimulator.Utils.FormatHelper.GetItemDisplayName(item.ItemTemplateId)</div>
                             <div class="material-qty">
                                 <span class="qty-label">수량:</span>
                                 <span class="qty-value">@item.Quantity</span>
@@ -87,7 +87,7 @@
                     {
                         <div class="queue-item">
                             <span class="item-name">@item.ItemName</span>
-                            <span class="item-qty">x@item.Quantity</span>
+                            <span class="item-qty">x@(item.Quantity)</span>
                             <span class="status-badge">✓ 완료</span>
                         </div>
                     }
@@ -341,7 +341,8 @@
             
             if (result.Success)
             {
-                CraftedItems.Add((result.ProducedItemId, result.ProducedQuantity));
+                var displayName = ShopOwnerSimulator.Utils.FormatHelper.GetItemDisplayName(result.ProducedItemId);
+                CraftedItems.Add((displayName, result.ProducedQuantity));
                 await GameState.LoadGameStateAsync();
                 await LoadRecipes();
             }

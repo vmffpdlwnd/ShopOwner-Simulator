@@ -10,8 +10,10 @@ public interface IStateService
     Player CurrentPlayer { get; set; }
     List<Mercenary> Mercenaries { get; set; }
     List<InventoryItem> Inventory { get; set; }
+    List<Transaction> Transactions { get; set; }
     
     Task LoadPlayerStateAsync(string playerId);
     Task SavePlayerStateAsync();
+    Task PersistLocalAsync();
     void NotifyStateChanged();
 }

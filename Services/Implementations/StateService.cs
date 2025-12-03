@@ -13,6 +13,7 @@ public class StateService : IStateService
     public Player? CurrentPlayer { get; set; }
     public List<Mercenary> Mercenaries { get; set; } = new();
     public List<InventoryItem> Inventory { get; set; } = new();
+    public List<Transaction> Transactions { get; set; } = new();
 
     public StateService(IStorageService storage, IPlayFabService playFab)
     {
@@ -98,6 +99,21 @@ public class StateService : IStateService
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Error saving player state: {ex.Message}");
+        }
+    }
+
+    public async Task PersistLocalAsync()
+    {
+        try
+        {
+            await _storage.SetAsync("current_player", CurrentPlayer);
+            await _storage.SetAsync("mercenaries", Mercenaries);
+            await _storage.SetAsync("inventory", Inventory);
+                await _storage.SetAsync("transactions", Transactions);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"StateService: Failed to persist local state: {ex}");
         }
     }
 

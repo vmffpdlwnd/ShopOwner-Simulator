@@ -26,7 +26,7 @@
                     {
                         <div class="order-card">
                             <div class="order-header">
-                                <h3>@order.ItemTemplateId</h3>
+                                <h3>@ShopOwnerSimulator.Utils.FormatHelper.GetItemDisplayName(order.ItemTemplateId)</h3>
                                 <span class="price">@order.UnitPrice G</span>
                             </div>
                             <div class="order-details">
@@ -69,7 +69,7 @@
                     {
                             <div class="my-order-card @(order.Status == OrderStatus.Completed ? "completed" : "")">
                             <div class="order-info">
-                                <h4>@order.ItemTemplateId</h4>
+                                <h4>@ShopOwnerSimulator.Utils.FormatHelper.GetItemDisplayName(order.ItemTemplateId)</h4>
                                 <div class="order-stat">
                                     <span>수량:</span>
                                     <span class="value">@order.Remaining/@order.Quantity</span>
@@ -108,7 +108,7 @@
                         {
                             @foreach (var item in GameState.Inventory.Where(i => !i.IsEquipped))
                             {
-                                <option value="@item.ItemTemplateId">@item.ItemTemplateId (x@item.Quantity)</option>
+                                <option value="@item.ItemTemplateId">@ShopOwnerSimulator.Utils.FormatHelper.GetItemDisplayName(item.ItemTemplateId) (x@(item.Quantity))</option>
                             }
                         }
                     </select>

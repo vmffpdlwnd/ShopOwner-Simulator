@@ -1,21 +1,41 @@
 // Services/Implementations/StorageService.cs
 using System.Text.Json;
+using Microsoft.JSInterop;
 
 namespace ShopOwnerSimulator.Services.Implementations;
 
 public class StorageService : IStorageService
 {
-    private readonly Dictionary<string, string> _cache = new();
+    private readonly IJSRuntime _jsRuntime;
+    private readonly Dictionary<string, string> _memoryCache = new();
     private const string StoragePrefix = "shop_simulator_";
+
+    public StorageService(IJSRuntime jsRuntime)
+    {
+        _jsRuntime = jsRuntime;
+    }
+
+    private string FullKey(string key) => $"{StoragePrefix}{key}";
 
     public async Task<T> GetAsync<T>(string key)
     {
-        await Task.CompletedTask;
-        var fullKey = $"{StoragePrefix}{key}";
-        
-        if (_cache.TryGetValue(fullKey, out var value))
+        var fullKey = FullKey(key);
+
+        try
         {
-            return JsonSerializer.Deserialize<T>(value);
+            var json = await _jsRuntime.InvokeAsync<string>("ShopOwnerSimulator.getLocalStorage", fullKey);
+            if (!string.IsNullOrEmpty(json))
+            {
+                return JsonSerializer.Deserialize<T>(json);
+            }
+        }
+        catch
+        {
+            // Fall back to in-memory cache when JS interop isn't available
+            if (_memoryCache.TryGetValue(fullKey, out var cached))
+            {
+                return JsonSerializer.Deserialize<T>(cached);
+            }
         }
 
         return default;
@@ -23,22 +43,44 @@ public class StorageService : IStorageService
 
     public async Task SetAsync<T>(string key, T value)
     {
-        await Task.CompletedTask;
-        var fullKey = $"{StoragePrefix}{key}";
+        var fullKey = FullKey(key);
         var json = JsonSerializer.Serialize(value);
-        _cache[fullKey] = json;
+
+        try
+        {
+            await _jsRuntime.InvokeVoidAsync("ShopOwnerSimulator.setLocalStorage", fullKey, json);
+        }
+        catch
+        {
+            // Fall back to in-memory cache when JS interop isn't available
+            _memoryCache[fullKey] = json;
+        }
     }
 
     public async Task RemoveAsync(string key)
     {
-        await Task.CompletedTask;
-        var fullKey = $"{StoragePrefix}{key}";
-        _cache.Remove(fullKey);
+        var fullKey = FullKey(key);
+
+        try
+        {
+            await _jsRuntime.InvokeVoidAsync("ShopOwnerSimulator.removeLocalStorage", fullKey);
+        }
+        catch
+        {
+            _memoryCache.Remove(fullKey);
+        }
     }
 
     public async Task ClearAsync()
     {
-        await Task.CompletedTask;
-        _cache.Clear();
+        try
+        {
+            await _jsRuntime.InvokeVoidAsync("ShopOwnerSimulator.clearLocalStorage");
+            _memoryCache.Clear();
+        }
+        catch
+        {
+            _memoryCache.Clear();
+        }
     }
 }

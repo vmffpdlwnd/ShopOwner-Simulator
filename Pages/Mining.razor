@@ -8,10 +8,10 @@
 @inject IDungeonService DungeonService
 @inject ITimerService TimerService
 
-<PageTitle>채굴 - 상점주인 시뮬레이터</PageTitle>
+<PageTitle>탐험 - 상점주인 시뮬레이터</PageTitle>
 
-<div class="mining-container">
-    <h1>채굴 관리</h1>
+<div class="explore-container">
+    <h1>탐험 관리</h1>
 
     <div class="mining-content">
         <!-- Mercenary List -->
@@ -22,7 +22,7 @@
                 {
                     @foreach (var merc in GameState.Mercenaries)
                     {
-                        <div class="merc-card @(merc.CurrentDungeonId != null ? "mining" : "")">
+                        <div class="merc-card @(merc.CurrentDungeonId != null ? "exploring" : "")">
                             <div class="merc-header">
                                 <h3>@merc.Name</h3>
                                 <span class="level">Level @merc.Level</span>
@@ -46,7 +46,7 @@
                             @if (merc.CurrentDungeonId != null)
                             {
                                 <div class="merc-status">
-                                    <span class="badge mining-badge">채굴중</span>
+                                    <span class="badge explore-badge">탐험중</span>
                                     <Timer EndTime="merc.DungeonEndTime" />
                                 </div>
                                 <button class="btn btn-danger" @onclick="() => AbandonDungeon(merc.Id)">
@@ -56,7 +56,7 @@
                             else
                             {
                                 <div class="merc-actions">
-                                    <select @onchange="e => SelectedDungeonId = e.Value.ToString()" class="form-control">
+                                    <select @onchange="e => OnSelectDungeon(merc.Id, e.Value.ToString())" class="form-control">
                                         <option value="">던전 선택</option>
                                         @foreach (var dungeon in Dungeons)
                                         {
@@ -65,8 +65,8 @@
                                     </select>
                                     <button class="btn btn-primary" 
                                         @onclick="() => StartDungeon(merc.Id)"
-                                        disabled="@string.IsNullOrEmpty(SelectedDungeonId)">
-                                        채굴 시작
+                                        disabled="@(!SelectedDungeonByMerc.ContainsKey(merc.Id) || string.IsNullOrEmpty(SelectedDungeonByMerc[merc.Id]))">
+                                        탐험 시작
                                     </button>
                                 </div>
                             }
@@ -110,19 +110,19 @@
 </div>
 
 <style>
-    .mining-container {
+    .explore-container {
         padding: 2rem;
         max-width: 1400px;
         margin: 0 auto;
     }
 
-    .mining-container h1 {
+    .explore-container h1 {
         margin-bottom: 2rem;
         font-size: 2rem;
         color: #333;
     }
 
-    .mining-content {
+    .explore-content {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 2rem;
@@ -162,7 +162,7 @@
         box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
     }
 
-    .merc-card.mining {
+    .merc-card.exploring {
         border-color: #ffc107;
         background: rgba(255, 193, 7, 0.05);
     }
@@ -233,7 +233,7 @@
         text-align: center;
     }
 
-    .mining-badge {
+    .explore-badge {
         background: #ffc107;
         color: #333;
     }
@@ -332,7 +332,7 @@
     }
 
     @@media (max-width: 1024px) {
-        .mining-content {
+        .explore-content {
             grid-template-columns: 1fr;
         }
     }
@@ -340,7 +340,7 @@
 
 @code {
     private List<Dungeon> Dungeons = new();
-    private string SelectedDungeonId = "";
+    private Dictionary<string, string> SelectedDungeonByMerc = new();
     private bool IsLoading = false;
 
     protected override async Task OnInitializedAsync()
@@ -363,20 +363,21 @@
 
     private async Task StartDungeon(string mercenaryId)
     {
-        if (string.IsNullOrEmpty(SelectedDungeonId))
+        if (!SelectedDungeonByMerc.ContainsKey(mercenaryId) || string.IsNullOrEmpty(SelectedDungeonByMerc[mercenaryId]))
             return;
 
         IsLoading = true;
         try
         {
-            var request = new DungeonStartRequest 
-            { 
-                MercenaryId = mercenaryId, 
-                DungeonId = SelectedDungeonId 
+            var request = new DungeonStartRequest
+            {
+                MercenaryId = mercenaryId,
+                DungeonId = SelectedDungeonByMerc[mercenaryId]
             };
-            
-            await DungeonService.StartDungeonAsync(request);
-            SelectedDungeonId = "";
+
+            var resp = await DungeonService.StartDungeonAsync(request);
+            // clear selection for this mercenary
+            SelectedDungeonByMerc.Remove(mercenaryId);
             await GameState.LoadGameStateAsync();
         }
         catch (Exception ex)
@@ -394,9 +395,18 @@
         var merc = GameState.Mercenaries.FirstOrDefault(m => m.Id == mercenaryId);
         if (merc?.CurrentDungeonId != null)
         {
-            // Implementation for abandoning dungeon
+            // CurrentDungeonId stores the progressId now
+            await DungeonService.AbandonDungeonAsync(merc.CurrentDungeonId);
             await GameState.LoadGameStateAsync();
         }
+    }
+
+    private void OnSelectDungeon(string mercId, string dungeonId)
+    {
+        if (string.IsNullOrEmpty(dungeonId))
+            SelectedDungeonByMerc.Remove(mercId);
+        else
+            SelectedDungeonByMerc[mercId] = dungeonId;
     }
 
     async ValueTask IAsyncDisposable.DisposeAsync()

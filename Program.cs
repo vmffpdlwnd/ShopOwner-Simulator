@@ -21,8 +21,19 @@ builder.Services.AddScoped(sp => new HttpClient
 });
 
 // PlayFab Configuration
-var playFabTitleId = config["PlayFab:TitleId"] ?? Environment.GetEnvironmentVariable("PLAYFAB_TITLE_ID");
-var playFabSecretKey = config["PlayFab:SecretKey"] ?? Environment.GetEnvironmentVariable("PLAYFAB_SECRET_KEY");
+string Normalize(string? v, string envName)
+{
+    if (string.IsNullOrWhiteSpace(v)) return Environment.GetEnvironmentVariable(envName) ?? string.Empty;
+    // If the value is a placeholder like ${PLAYFAB_TITLE_ID}, treat it as empty
+    if (v.Contains("${") && v.Contains("}")) return Environment.GetEnvironmentVariable(envName) ?? string.Empty;
+    return v;
+}
+
+var playFabTitleId = Normalize(config["PlayFab:TitleId"], "PLAYFAB_TITLE_ID");
+var playFabSecretKey = Normalize(config["PlayFab:SecretKey"], "PLAYFAB_SECRET_KEY");
+
+if (string.IsNullOrWhiteSpace(playFabTitleId)) playFabTitleId = null;
+if (string.IsNullOrWhiteSpace(playFabSecretKey)) playFabSecretKey = null;
 
 // Services - Interfaces & Implementations
 builder.Services.AddScoped<IPlayFabService>(sp => 
@@ -37,8 +48,8 @@ builder.Services.AddScoped<IGameService, GameService>();
 builder.Services.AddScoped<IDungeonService, DungeonService>();
 builder.Services.AddScoped<ICraftingService, CraftingService>();
 builder.Services.AddScoped<IExchangeService, ExchangeService>();
-builder.Services.AddScoped<IMercenaryService, MercenaryService>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
+builder.Services.AddScoped<IMercenaryService, MercenaryService>();
 builder.Services.AddScoped<IPersonalShopService, PersonalShopService>();
 
 // Global State

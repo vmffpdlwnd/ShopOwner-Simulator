@@ -11,10 +11,10 @@
 
     <div class="inventory-tabs">
         <button class='tab @(CurrentTab == "items" ? "active" : "")' @onclick='() => CurrentTab = "items"'>
-            📦 아이템
+            아이템
         </button>
         <button class='tab @(CurrentTab == "equipment" ? "active" : "")' @onclick='() => CurrentTab = "equipment"'>
-            ⚔️ 장비
+            장비
         </button>
     </div>
 
@@ -29,13 +29,13 @@
                     {
                         <div class="inventory-card">
                             <div class="card-header">
-                                <h3>@item.ItemTemplateId</h3>
-                                <span class="qty-badge">x@item.Quantity</span>
+                                <h3>@ShopOwnerSimulator.Utils.FormatHelper.GetItemDisplayName(item.ItemTemplateId)</h3>
+                                <span class="qty-badge">x@(item.Quantity)</span>
                             </div>
                             <div class="card-content">
                                 <div class="item-stat">
-                                    <span class="label">아이템 ID</span>
-                                    <span class="value">@item.Id</span>
+                                    <span class="label">설명</span>
+                                    <span class="value">@ShopOwnerSimulator.Utils.FormatHelper.GetItemDescription(item.ItemTemplateId)</span>
                                 </div>
                                 <div class="item-stat">
                                     <span class="label">상태</span>
@@ -70,13 +70,17 @@
                         {
                             <div class="equipment-card">
                                 <div class="equipment-header">
-                                    <span class="equipped-badge">✓ 착용중</span>
-                                    <h3>@item.ItemTemplateId</h3>
+                                    <span class="equipped-badge">착용중</span>
+                                    <h3>@ShopOwnerSimulator.Utils.FormatHelper.GetItemDisplayName(item.ItemTemplateId)</h3>
                                 </div>
                                 <div class="equipment-info">
                                     <div class="info-row">
                                         <span class="label">착용 중인 용병</span>
-                                        <span class="value">@item.EquippedMercenaryId</span>
+                                        @{ 
+                                            var eqName = GameState.Mercenaries?.FirstOrDefault(m => m.Id == item.EquippedMercenaryId)?.Name;
+                                            var equippedDisplay = !string.IsNullOrEmpty(eqName) ? eqName : (!string.IsNullOrEmpty(item.EquippedMercenaryId) ? item.EquippedMercenaryId : "미착용");
+                                        }
+                                        <span class="value">@equippedDisplay</span>
                                     </div>
                                 </div>
                                 <button class="btn btn-danger w-100">
@@ -99,8 +103,8 @@
                         {
                             <div class="equipment-card unequipped">
                                 <div class="equipment-header">
-                                    <h3>@item.ItemTemplateId</h3>
-                                    <span class="qty-badge">x@item.Quantity</span>
+                                    <h3>@ShopOwnerSimulator.Utils.FormatHelper.GetItemDisplayName(item.ItemTemplateId)</h3>
+                                    <span class="qty-badge">x@(item.Quantity)</span>
                                 </div>
                                 <button class="btn btn-primary w-100">
                                     용병에게 장착

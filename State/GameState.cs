@@ -14,6 +14,7 @@ public class GameState
     public Player? Player { get; private set; }
     public List<Mercenary> Mercenaries { get; private set; } = new();
     public List<InventoryItem> Inventory { get; private set; } = new();
+        public List<Transaction> Transactions { get; private set; } = new();
     public bool IsLoading { get; private set; } = false;
     public bool IsInitialized { get; private set; } = false;
 
@@ -21,7 +22,7 @@ public class GameState
     {
         _gameService = gameService;
         _stateService = stateService;
-        _stateService.OnStateChanged += NotifyStateChanged;
+        _stateService.OnStateChanged += StateServiceChanged;
     }
 
     public async Task InitializeAsync()
@@ -44,6 +45,25 @@ public class GameState
         }
     }
 
+    // Initialize using an existing player id (e.g. after server-side guest/login)
+    public async Task InitializeWithPlayerIdAsync(string playerId)
+    {
+        if (IsInitialized)
+            return;
+
+        IsLoading = true;
+        try
+        {
+            await _gameService.InitializeGameAsync(playerId);
+            await LoadGameStateAsync();
+            IsInitialized = true;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
     public async Task LoadGameStateAsync()
     {
         IsLoading = true;
@@ -52,6 +72,7 @@ public class GameState
             Player = _stateService.CurrentPlayer;
             Mercenaries = new List<Mercenary>(_stateService.Mercenaries);
             Inventory = new List<InventoryItem>(_stateService.Inventory);
+                Transactions = new List<Transaction>(_stateService.Transactions);
             
             NotifyStateChanged();
             await Task.CompletedTask;
@@ -67,6 +88,40 @@ public class GameState
         if (Player == null)
         {
             await LoadGameStateAsync();
+        }
+    }
+
+    public async Task LogoutAsync()
+    {
+        IsLoading = true;
+        try
+        {
+            // Clear state service and in-memory copies
+            try
+            {
+                _stateService.CurrentPlayer = null;
+                _stateService.Mercenaries = new List<Mercenary>();
+                _stateService.Inventory = new List<InventoryItem>();
+                _stateService.Transactions = new List<Transaction>();
+
+                await _stateService.PersistLocalAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Logout: failed to clear state service: {ex}");
+            }
+
+            Player = null;
+            Mercenaries = new List<Mercenary>();
+            Inventory = new List<InventoryItem>();
+            Transactions = new List<Transaction>();
+
+            IsInitialized = false;
+            NotifyStateChanged();
+        }
+        finally
+        {
+            IsLoading = false;
         }
     }
 
@@ -124,6 +179,12 @@ public class GameState
         OnStateChanged?.Invoke();
     }
 
+    private void StateServiceChanged()
+    {
+        // When the underlying StateService changes, refresh GameState copies
+        _ = LoadGameStateAsync();
+    }
+
     private Task<string> GetOrCreatePlayerId()
     {
         var playerId = Guid.NewGuid().ToString();
@@ -166,6 +227,16 @@ public class GameState
 
             _stateService.Inventory.Add(ore);
             _stateService.Inventory.Add(wood);
+
+            // Persist guest data locally so it survives page refreshes
+            try
+            {
+                await _stateService.PersistLocalAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"GameState: Failed to persist guest data: {ex}");
+            }
 
             // Reflect into GameState properties
             await LoadGameStateAsync();

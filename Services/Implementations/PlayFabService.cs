@@ -69,12 +69,16 @@ public class PlayFabService : IPlayFabService
             {
                 throw new Exception("사용자 이름이 이미 사용 중입니다.", pex);
             }
+            if (string.Equals(pex.Error, "InvalidParams", StringComparison.OrdinalIgnoreCase) || pex.ErrorCode == 1000)
+            {
+                throw new Exception($"회원가입 실패: {pex.PlayFabMessage}", pex);
+            }
 
-            throw new Exception("회원가입 실패", pex);
+            throw new Exception($"회원가입 실패: {pex.Message}", pex);
         }
         catch (Exception ex)
         {
-            throw new Exception("회원가입 실패", ex);
+            throw new Exception($"회원가입 실패: {ex.Message}", ex);
         }
     }
 
@@ -95,9 +99,10 @@ public class PlayFabService : IPlayFabService
             _sessionTicket = response.SessionTicket;
             return response.PlayFabId;
         }
-        catch
+        catch (Exception ex)
         {
-            throw new Exception("게스트 로그인 실패");
+            // Preserve inner exception so caller can inspect PlayFab API error payload
+            throw new Exception("게스트 로그인 실패", ex);
         }
     }
 
@@ -280,6 +285,27 @@ public class PlayFabService : IPlayFabService
         }
         catch
         {
+            return false;
+        }
+    }
+
+    // Update the player's display name (what other players see). Requires auth.
+    public async Task<bool> UpdateDisplayNameAsync(string displayName)
+    {
+        var url = $"https://{_titleId}.playfabapi.com/Client/UpdateUserTitleDisplayName";
+        var payload = new
+        {
+            DisplayName = displayName
+        };
+
+        try
+        {
+            await PostAsync<object>(url, payload, true);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"DisplayName update failed: {ex.Message}");
             return false;
         }
     }
