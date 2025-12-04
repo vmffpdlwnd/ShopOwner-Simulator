@@ -41,11 +41,7 @@
 </div>
 
 @code {
-    // Explicit parameterless constructor to ensure runtime Activator can instantiate
-    // the component even if a non-default ctor exists elsewhere/was generated.
-    public MainLayout()
-    {
-    }
+    // Component instantiation handled by explicit partial class in MainLayout.razor.cs
     protected override async Task OnInitializedAsync()
     {
         // Load game state on layout initialization
