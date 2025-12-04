@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using ShopOwnerSimulator.State;
 
 namespace ShopOwnerSimulator.Components.Layout
 {
