@@ -21,23 +21,20 @@ builder.Services.AddScoped(sp => new HttpClient
 });
 
 // PlayFab Configuration
-string Normalize(string? v, string envName)
-{
-    if (string.IsNullOrWhiteSpace(v)) return Environment.GetEnvironmentVariable(envName) ?? string.Empty;
-    // If the value is a placeholder like ${PLAYFAB_TITLE_ID}, treat it as empty
-    if (v.Contains("${") && v.Contains("}")) return Environment.GetEnvironmentVariable(envName) ?? string.Empty;
-    return v;
-}
+var playFabTitleId = config["PlayFab:TitleId"] ?? Environment.GetEnvironmentVariable("PLAYFAB_TITLE_ID");
+var playFabSecretKey = config["PlayFab:SecretKey"] ?? Environment.GetEnvironmentVariable("PLAYFAB_SECRET_KEY");
 
-var playFabTitleId = Normalize(config["PlayFab:TitleId"], "PLAYFAB_TITLE_ID");
-var playFabSecretKey = Normalize(config["PlayFab:SecretKey"], "PLAYFAB_SECRET_KEY");
-
-if (string.IsNullOrWhiteSpace(playFabTitleId)) playFabTitleId = null;
-if (string.IsNullOrWhiteSpace(playFabSecretKey)) playFabSecretKey = null;
+// AWS DynamoDB Configuration
+var awsAccessKey = config["AWS:AccessKey"] ?? Environment.GetEnvironmentVariable("AWS_ACCESS_KEY");
+var awsSecretKey = config["AWS:SecretKey"] ?? Environment.GetEnvironmentVariable("AWS_SECRET_KEY");
+var awsRegion = config["AWS:Region"] ?? "ap-northeast-2";
 
 // Services - Interfaces & Implementations
 builder.Services.AddScoped<IPlayFabService>(sp => 
     new PlayFabService(playFabTitleId, playFabSecretKey));
+
+builder.Services.AddSingleton<IDynamoDBService>(sp => 
+    new DynamoDBService(awsAccessKey, awsSecretKey, awsRegion));
 
 builder.Services.AddScoped<IStorageService, StorageService>();
 builder.Services.AddScoped<IStateService, StateService>();
@@ -48,8 +45,8 @@ builder.Services.AddScoped<IGameService, GameService>();
 builder.Services.AddScoped<IDungeonService, DungeonService>();
 builder.Services.AddScoped<ICraftingService, CraftingService>();
 builder.Services.AddScoped<IExchangeService, ExchangeService>();
-builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<IMercenaryService, MercenaryService>();
+builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<IPersonalShopService, PersonalShopService>();
 
 // Global State
@@ -63,6 +60,8 @@ builder.Logging.SetMinimumLevel(LogLevel.Information);
 
 var host = builder.Build();
 
-// NOTE: Do not auto-initialize GameState here. Initialization occurs after user chooses
-// to Login or Play as Guest so we can support an optional (ephemeral) guest mode.
+// Initialize app state on startup
+var gameState = host.Services.GetRequiredService<GameState>();
+await gameState.InitializeAsync();
+
 await host.RunAsync();

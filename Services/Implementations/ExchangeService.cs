@@ -7,53 +7,39 @@ namespace ShopOwnerSimulator.Services.Implementations;
 public class ExchangeService : IExchangeService
 {
     private readonly IStateService _stateService;
-    private readonly IStorageService _storage;
+    private readonly IDynamoDBService _dynamoDB;
     private readonly IInventoryService _inventoryService;
-
-    private readonly List<ExchangeOrder> _orders = new();
-    private readonly List<Transaction> _transactions = new();
-
-    private readonly Dictionary<string, long> _itemPrices = new()
-    {
-        { "material_ore", 100 },
-        { "material_wood", 80 },
-        { "material_herb", 120 },
-        { "equipment_sword", 500 },
-        { "equipment_armor", 400 }
-    };
 
     public ExchangeService(
         IStateService stateService,
-        IStorageService storage,
+        IDynamoDBService dynamoDB,
         IInventoryService inventoryService)
     {
         _stateService = stateService;
-        _storage = storage;
+        _dynamoDB = dynamoDB;
         _inventoryService = inventoryService;
     }
 
     public async Task<List<ExchangeOrder>> GetOrdersAsync(string itemTemplateId)
     {
-        return _orders
-            .Where(o => o.ItemTemplateId == itemTemplateId && o.Status == OrderStatus.Active)
-            .ToList();
+        return await _dynamoDB.GetExchangeOrdersByItemAsync(itemTemplateId);
     }
 
     public async Task<List<ExchangeOrder>> GetMyOrdersAsync(string playerId)
     {
-        return _orders.Where(o => o.SellerId == playerId).ToList();
+        return await _dynamoDB.GetPlayerOrdersAsync(playerId);
     }
 
     public async Task<ExchangeListResponse> ListOrderAsync(ExchangeListRequest request)
     {
-        // Verify item exists in inventory
+        // 인벤토리 확인
         var inventoryItem = _stateService.Inventory.FirstOrDefault(
             i => i.ItemTemplateId == request.ItemTemplateId);
 
         if (inventoryItem == null || inventoryItem.Quantity < request.Quantity)
-            throw new Exception("Insufficient inventory");
+            throw new Exception("인벤토리가 부족합니다");
 
-        // Create order
+        // 주문 생성
         var order = new ExchangeOrder
         {
             Id = Guid.NewGuid().ToString(),
@@ -66,15 +52,14 @@ public class ExchangeService : IExchangeService
             Status = OrderStatus.Active
         };
 
-        // Remove from inventory
-            // Remove from inventory (use the actual inventory item id)
-            await _inventoryService.RemoveItemAsync(
-                _stateService.CurrentPlayer.Id,
-                inventoryItem.Id,
-                request.Quantity);
+        // 인벤토리에서 제거
+        await _inventoryService.RemoveItemAsync(
+            _stateService.CurrentPlayer.Id,
+            request.ItemTemplateId,
+            request.Quantity);
 
-        _orders.Add(order);
-        await _storage.SetAsync($"exchange_order_{order.Id}", order);
+        // DB에 저장
+        await _dynamoDB.SaveExchangeOrderAsync(order);
 
         return new ExchangeListResponse
         {
@@ -85,42 +70,35 @@ public class ExchangeService : IExchangeService
 
     public async Task<Transaction> BuyAsync(ExchangeBuyRequest request)
     {
-        var order = _orders.FirstOrDefault(o => o.Id == request.OrderId);
+        var order = await _dynamoDB.GetExchangeOrderAsync(request.OrderId);
         if (order == null || order.Status != OrderStatus.Active)
-            throw new Exception("Order not available");
+            throw new Exception("주문을 찾을 수 없습니다");
 
         if (order.Remaining < request.Quantity)
-            throw new Exception("Insufficient quantity");
+            throw new Exception("수량이 부족합니다");
 
         var totalCost = order.UnitPrice * request.Quantity;
         if (_stateService.CurrentPlayer.Gold < totalCost)
-            throw new Exception("Insufficient gold");
+            throw new Exception("골드가 부족합니다");
 
-        // Deduct gold from buyer
+        // 구매자 골드 차감
         _stateService.CurrentPlayer.Gold -= totalCost;
 
-        // Add item to buyer inventory
+        // 구매자 인벤토리에 아이템 추가
         await _inventoryService.AddItemAsync(
             _stateService.CurrentPlayer.Id,
             order.ItemTemplateId,
             request.Quantity);
 
-        // Add gold to seller
-        var seller = _stateService.Mercenaries.FirstOrDefault(m => m.PlayerId == order.SellerId);
-        if (seller != null)
-        {
-            // Get seller's player data and update gold
-            // This is simplified - in real implementation, fetch seller player data
-        }
-
-        // Update order
+        // 주문 업데이트
         order.Remaining -= request.Quantity;
         if (order.Remaining == 0)
         {
             order.Status = OrderStatus.Completed;
         }
+        await _dynamoDB.SaveExchangeOrderAsync(order);
 
-        // Create transaction record
+        // 거래 기록 생성
         var transaction = new Transaction
         {
             Id = Guid.NewGuid().ToString(),
@@ -135,42 +113,33 @@ public class ExchangeService : IExchangeService
             Type = TransactionType.Exchange
         };
 
-        _transactions.Add(transaction);
-        await _storage.SetAsync($"transaction_{transaction.Id}", transaction);
-
-        // Record transaction in global state for dashboard/analytics
-        try
-        {
-            _stateService.Transactions.Add(transaction);
-            await _storage.SetAsync("transactions", _stateService.Transactions);
-            _stateService.NotifyStateChanged();
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"ExchangeService: Failed to record transaction in state: {ex.Message}");
-        }
+        await _dynamoDB.SaveTransactionAsync(transaction);
+        _stateService.NotifyStateChanged();
 
         return transaction;
     }
 
-    public Task<bool> CancelOrderAsync(string orderId)
+    public async Task<bool> CancelOrderAsync(string orderId)
     {
-        throw new NotImplementedException();
+        var order = await _dynamoDB.GetExchangeOrderAsync(orderId);
+        if (order == null || order.Status != OrderStatus.Active)
+            return false;
+
+        // 인벤토리에 반환
+        await _inventoryService.AddItemAsync(
+            order.SellerId,
+            order.ItemTemplateId,
+            order.Remaining);
+
+        order.Status = OrderStatus.Cancelled;
+        await _dynamoDB.SaveExchangeOrderAsync(order);
+
+        return true;
     }
 
-    public Task<List<ItemTemplate>> GetAvailableItemsAsync()
+    public async Task<List<ItemTemplate>> GetAvailableItemsAsync()
     {
-        // Return simple templates based on configured prices
-        var templates = _itemPrices.Select(kv => new ItemTemplate
-        {
-            Id = kv.Key,
-            Name = ShopOwnerSimulator.Utils.FormatHelper.GetItemDisplayName(kv.Key),
-            BasePrice = kv.Value,
-            Description = ShopOwnerSimulator.Utils.FormatHelper.GetItemDescription(kv.Key),
-            Type = kv.Key.StartsWith("equipment") ? ItemType.Equipment : ItemType.Material,
-            Rarity = ItemRarity.Common
-        }).ToList();
-
-        return Task.FromResult(templates);
+        // 임시 구현 - 나중에 DB에서 가져오기
+        return new List<ItemTemplate>();
     }
 }

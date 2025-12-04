@@ -7,29 +7,22 @@ namespace ShopOwnerSimulator.Services.Implementations;
 public class DungeonService : IDungeonService
 {
     private readonly IStateService _stateService;
-    private readonly IStorageService _storage;
+    private readonly IDynamoDBService _dynamoDB;
     private readonly ITimerService _timerService;
-    private readonly IInventoryService _inventoryService;
-    private readonly IMercenaryService _mercenaryService;
 
     // Mock dungeon data
     private readonly List<Dungeon> _dungeons = new()
     {
-        new Dungeon { Id = "dng_001", Name = "Beginner Cave", Level = 1, BaseRewardTime = 300 },
-        new Dungeon { Id = "dng_002", Name = "Dark Forest", Level = 5, BaseRewardTime = 600 },
-        new Dungeon { Id = "dng_003", Name = "Ancient Ruins", Level = 10, BaseRewardTime = 900 }
+        new Dungeon { Id = "dng_001", Name = "초급 동굴", Level = 1, BaseRewardTime = 300 },
+        new Dungeon { Id = "dng_002", Name = "어두운 숲", Level = 5, BaseRewardTime = 600 },
+        new Dungeon { Id = "dng_003", Name = "고대 유적", Level = 10, BaseRewardTime = 900 }
     };
 
-    private readonly Dictionary<string, DungeonProgress> _progressTracker = new();
-
-    public DungeonService(IStateService stateService, IStorageService storage, ITimerService timerService,
-        IInventoryService inventoryService, IMercenaryService mercenaryService)
+    public DungeonService(IStateService stateService, IDynamoDBService dynamoDB, ITimerService timerService)
     {
         _stateService = stateService;
-        _storage = storage;
+        _dynamoDB = dynamoDB;
         _timerService = timerService;
-        _inventoryService = inventoryService;
-        _mercenaryService = mercenaryService;
     }
 
     public async Task<List<Dungeon>> GetAvailableDungeonsAsync()
@@ -62,19 +55,17 @@ public class DungeonService : IDungeonService
             Status = DungeonProgressStatus.InProgress
         };
 
-        _progressTracker[progress.Id] = progress;
-        // Store the progress Id on the mercenary so we can reference/abandon later
-        mercenary.CurrentDungeonId = progress.Id;
+        // DB에 저장
+        await _dynamoDB.SaveDungeonProgressAsync(progress);
+        
+        mercenary.CurrentDungeonId = request.DungeonId;
         mercenary.DungeonEndTime = endTime;
 
-        // Start timer
+        // 타이머 시작
         _timerService.StartTimer(progress.Id, endTime, async () =>
         {
             await CompleteDungeonAsync(progress.Id);
         });
-
-        await _storage.SetAsync($"dungeon_progress_{progress.Id}", progress);
-        await _storage.SetAsync($"mercenary_{mercenary.Id}", mercenary);
 
         return new DungeonStartResponse
         {
@@ -86,12 +77,7 @@ public class DungeonService : IDungeonService
 
     public async Task<DungeonProgress> GetDungeonProgressAsync(string progressId)
     {
-        if (_progressTracker.TryGetValue(progressId, out var progress))
-        {
-            return progress;
-        }
-
-        return await _storage.GetAsync<DungeonProgress>($"dungeon_progress_{progressId}");
+        return await _dynamoDB.GetDungeonProgressAsync(progressId);
     }
 
     public async Task<bool> CompleteDungeonAsync(string progressId)
@@ -103,54 +89,16 @@ public class DungeonService : IDungeonService
         progress.Status = DungeonProgressStatus.Completed;
         var dungeon = _dungeons.FirstOrDefault(d => d.Id == progress.DungeonId);
 
-        // Generate rewards and process them
-        var rewards = GenerateRewards(dungeon!);
-
-        // Award gold (mocked: each reward unit gives some gold)
+        // 보상 생성 및 인벤토리에 추가
+        var rewards = GenerateRewards(dungeon);
         foreach (var reward in rewards)
         {
+            // TODO: 인벤토리에 실제 추가
             _stateService.CurrentPlayer.Gold += reward.Value * 10;
         }
 
-        // Also add item rewards to inventory
-        if (_stateService.CurrentPlayer != null)
-        {
-            foreach (var reward in rewards)
-            {
-                // If reward is a material/equipment template id, add to inventory
-                await _inventoryService.AddItemAsync(_stateService.CurrentPlayer.Id, reward.Key, reward.Value);
-            }
-        }
-
-        // Award experience to the mercenary and clear dungeon assignment
-        var merc = _stateService.Mercenaries.FirstOrDefault(m => m.Id == progress.MercenaryId);
-        if (merc != null && dungeon != null)
-        {
-            var rnd = new Random();
-            var xpGain = dungeon.Level * 10 + rnd.Next(5, 16);
-            merc.Experience += xpGain;
-
-            // Simple level-up loop
-            while (merc.Experience >= merc.Level * 100)
-            {
-                merc.Experience -= merc.Level * 100;
-                merc.Level += 1;
-            }
-
-            // Clear dungeon fields
-            merc.CurrentDungeonId = null;
-            merc.DungeonEndTime = null;
-
-            // Recalculate stats after potential level up / equipment
-            await _mercenaryService.UpdateMercenaryStatsAsync(merc.Id);
-        }
-
         _timerService.StopTimer(progressId);
-
-        // Persist progress and full player state (includes mercenaries & inventory)
-        await _storage.SetAsync($"dungeon_progress_{progressId}", progress);
-        await _stateService.SavePlayerStateAsync();
-
+        await _dynamoDB.SaveDungeonProgressAsync(progress);
         _stateService.NotifyStateChanged();
 
         return true;
@@ -164,20 +112,7 @@ public class DungeonService : IDungeonService
 
         progress.Status = DungeonProgressStatus.Abandoned;
         _timerService.StopTimer(progressId);
-        await _storage.SetAsync($"dungeon_progress_{progressId}", progress);
-
-        // Clear mercenary assignment if present
-        var merc = _stateService.Mercenaries.FirstOrDefault(m => m.Id == progress.MercenaryId);
-        if (merc != null)
-        {
-            merc.CurrentDungeonId = null;
-            merc.DungeonEndTime = null;
-            await _storage.SetAsync($"mercenary_{merc.Id}", merc);
-        }
-
-        // Persist overall state (inventory/mercenaries/player)
-        await _stateService.SavePlayerStateAsync();
-        _stateService.NotifyStateChanged();
+        await _dynamoDB.SaveDungeonProgressAsync(progress);
 
         return true;
     }
@@ -199,4 +134,4 @@ public class DungeonService : IDungeonService
     }
 }
 
-// Dungeon and DungeonProgressStatus moved to Models/Entities
+// Use `Dungeon` and `DungeonProgressStatus` from `ShopOwnerSimulator.Models.Entities`
