@@ -49,9 +49,17 @@
     protected override async Task OnInitializedAsync()
     {
         // Load game state on layout initialization
-        if (GameState.Player == null)
+        try
         {
-            await GameState.LoadPlayerAsync();
+            if (GameState != null && GameState.Player == null)
+            {
+                await GameState.LoadPlayerAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Prevent layout rendering from crashing the app on startup.
+            Console.Error.WriteLine($"MainLayout: failed to initialize GameState: {ex}");
         }
     }
 }
