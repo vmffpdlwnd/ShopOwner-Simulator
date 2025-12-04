@@ -1,8 +1,4 @@
 <!-- Components/Layout/MainLayout.razor -->
-@inherits LayoutComponentBase
-@inject NavigationManager Navigation
-@inject GameState GameState
-
 <div class="app-container">
     <nav class="navbar">
         <div class="navbar-brand">
@@ -40,22 +36,4 @@
     </footer>
 </div>
 
-@code {
-    // Component instantiation handled by explicit partial class in MainLayout.razor.cs
-    protected override async Task OnInitializedAsync()
-    {
-        // Load game state on layout initialization
-        try
-        {
-            if (GameState != null && GameState.Player == null)
-            {
-                await GameState.LoadPlayerAsync();
-            }
-        }
-        catch (Exception ex)
-        {
-            // Prevent layout rendering from crashing the app on startup.
-            Console.Error.WriteLine($"MainLayout: failed to initialize GameState: {ex}");
-        }
-    }
-}
+<!-- Code-behind in MainLayout.razor.cs handles lifecycle and DI -->
