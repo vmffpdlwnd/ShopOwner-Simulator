@@ -25,11 +25,11 @@
             <div class="player-info">
                 <div class="info-card">
                     <h3>골드</h3>
-                    <p class="gold-amount">@GameState.Player?.Gold.ToString("N0")</p>
+                    <p class="gold-amount">@(GameState.Player != null ? GameState.Player.Gold.ToString("N0") : "0")</p>
                 </div>
                 <div class="info-card">
                     <h3>용병</h3>
-                    <p class="merc-count">@GameState.Mercenaries?.Count</p>
+                    <p class="merc-count">@(GameState.Mercenaries != null ? GameState.Mercenaries.Count : 0)</p>
                 </div>
             </div>
         </aside>
