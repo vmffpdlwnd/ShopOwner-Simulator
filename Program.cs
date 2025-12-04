@@ -60,8 +60,10 @@ builder.Logging.SetMinimumLevel(LogLevel.Information);
 
 var host = builder.Build();
 
-// Initialize app state on startup
-var gameState = host.Services.GetRequiredService<GameState>();
-await gameState.InitializeAsync();
+// NOTE: Do not initialize GameState automatically on startup.
+// Some environments may not provide PlayFab credentials or a valid
+// session at load time; initializing here causes unauthenticated
+// PlayFab calls and runtime failures. Initialization is deferred
+// until the user explicitly logs in or starts a guest session.
 
 await host.RunAsync();
