@@ -14,8 +14,6 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    env:
-      PROJECT_NAME: ShopOwner-Simulator
     
     steps:
       - name: Checkout code
@@ -37,6 +35,8 @@ jobs:
         # that will be served to users. PlayFab SecretKey should never be embedded in a
         # client-side Blazor WebAssembly build. If server-side features need the secret,
         # keep it only on the server or use serverless/worker endpoints.
+        env:
+          PLAYFAB_TITLE_ID: ${{ secrets.PLAYFAB_TITLE_ID }} # TitleId is not secret and can be provided if needed
         run: dotnet publish ShopOwnerSimulator.csproj -c Release -o publish
 
       - name: Validate Cloudflare secrets
