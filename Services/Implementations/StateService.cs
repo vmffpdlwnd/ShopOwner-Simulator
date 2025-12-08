@@ -8,9 +8,9 @@ public class StateService : IStateService
     private readonly IStorageService _storage;
     private readonly IPlayFabService _playFab;
     
-    public event Action? OnStateChanged;
+    public event Action OnStateChanged;
 
-    public Player? CurrentPlayer { get; set; }
+    public Player CurrentPlayer { get; set; }
     public List<Mercenary> Mercenaries { get; set; } = new();
     public List<InventoryItem> Inventory { get; set; } = new();
     public List<Transaction> Transactions { get; set; } = new();
@@ -40,35 +40,6 @@ public class StateService : IStateService
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Error loading player state: {ex.Message}");
-        }
-
-        // Ensure we have at least a default player when PlayFab is disabled or calls failed
-        if (CurrentPlayer == null)
-        {
-            Console.Error.WriteLine("StateService: CurrentPlayer was null after load; creating default local player.");
-            CurrentPlayer = new Player
-            {
-                Id = string.IsNullOrWhiteSpace(playerId) ? Guid.NewGuid().ToString() : playerId,
-                Username = "LocalPlayer",
-                Level = 1,
-                Experience = 0,
-                Gold = 1000,
-                Crystal = 0,
-                CreatedAt = DateTime.UtcNow,
-                LastLoginAt = DateTime.UtcNow
-            };
-
-            // Persist defaults
-            try
-            {
-                await _storage.SetAsync("current_player", CurrentPlayer);
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"StateService: Failed to persist default player: {ex}");
-            }
-
-            NotifyStateChanged();
         }
     }
 
@@ -109,7 +80,7 @@ public class StateService : IStateService
             await _storage.SetAsync("current_player", CurrentPlayer);
             await _storage.SetAsync("mercenaries", Mercenaries);
             await _storage.SetAsync("inventory", Inventory);
-                await _storage.SetAsync("transactions", Transactions);
+            await _storage.SetAsync("transactions", Transactions);
         }
         catch (Exception ex)
         {

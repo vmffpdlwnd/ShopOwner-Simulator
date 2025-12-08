@@ -4,12 +4,13 @@ namespace ShopOwnerSimulator.Services.Implementations;
 public class TimerService : ITimerService
 {
     private readonly Dictionary<string, TimerData> _timers = new();
+    private CancellationTokenSource _cancellationTokenSource = new();
 
     private class TimerData
     {
         public DateTime EndTime { get; set; }
         public Action OnComplete { get; set; }
-        public Timer Timer { get; set; }
+        public CancellationTokenSource CancellationToken { get; set; }
     }
 
     public void StartTimer(string timerId, DateTime endTime, Action onComplete)
@@ -19,36 +20,53 @@ public class TimerService : ITimerService
             StopTimer(timerId);
         }
 
+        var cts = new CancellationTokenSource();
         var timerData = new TimerData
         {
             EndTime = endTime,
-            OnComplete = onComplete
+            OnComplete = onComplete,
+            CancellationToken = cts
         };
 
-        var remaining = endTime - DateTime.UtcNow;
-        if (remaining.TotalMilliseconds <= 0)
-        {
-            onComplete?.Invoke();
-            return;
-        }
-
-        timerData.Timer = new Timer(_ =>
-        {
-            if (DateTime.UtcNow >= endTime)
-            {
-                onComplete?.Invoke();
-                StopTimer(timerId);
-            }
-        }, null, (long)remaining.TotalMilliseconds, Timeout.Infinite);
-
         _timers[timerId] = timerData;
+
+        // Blazor WebAssembly 호환 타이머
+        Task.Run(async () =>
+        {
+            try
+            {
+                var remaining = endTime - DateTime.UtcNow;
+                if (remaining.TotalMilliseconds <= 0)
+                {
+                    onComplete?.Invoke();
+                    StopTimer(timerId);
+                    return;
+                }
+
+                while (DateTime.UtcNow < endTime && !cts.Token.IsCancellationRequested)
+                {
+                    await Task.Delay(1000, cts.Token);
+                }
+
+                if (!cts.Token.IsCancellationRequested)
+                {
+                    onComplete?.Invoke();
+                    StopTimer(timerId);
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                // 타이머 취소됨
+            }
+        }, cts.Token);
     }
 
     public void StopTimer(string timerId)
     {
         if (_timers.TryGetValue(timerId, out var timerData))
         {
-            timerData.Timer?.Dispose();
+            timerData.CancellationToken?.Cancel();
+            timerData.CancellationToken?.Dispose();
             _timers.Remove(timerId);
         }
     }

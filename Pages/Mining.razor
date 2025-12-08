@@ -347,6 +347,41 @@
     {
         GameState.OnStateChanged += StateHasChanged;
         await LoadDungeons();
+        await CheckForCompletedDungeons();
+    }
+
+    private async Task CheckForCompletedDungeons()
+    {
+        var activeMercenaries = GameState.Mercenaries?.Where(m => m.CurrentDungeonId != null && m.DungeonEndTime.HasValue).ToList();
+
+        if (activeMercenaries == null || !activeMercenaries.Any())
+        {
+            return;
+        }
+
+        bool stateChanged = false;
+        foreach (var merc in activeMercenaries)
+        {
+            if (merc.DungeonEndTime.Value <= DateTime.UtcNow)
+            {
+                try
+                {
+                    // CurrentDungeonId is the progressId
+                    await DungeonService.CompleteDungeonAsync(merc.CurrentDungeonId);
+                    stateChanged = true;
+                    Console.WriteLine($"탐험 ID {merc.CurrentDungeonId} 자동 완료 처리되었습니다.");
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"완료되지 않은 탐험을 완료하는 중 오류 발생 {merc.CurrentDungeonId}: {ex.Message}");
+                }
+            }
+        }
+
+        if (stateChanged)
+        {
+            await GameState.LoadGameStateAsync();
+        }
     }
 
     private async Task LoadDungeons()
@@ -395,9 +430,21 @@
         var merc = GameState.Mercenaries.FirstOrDefault(m => m.Id == mercenaryId);
         if (merc?.CurrentDungeonId != null)
         {
-            // CurrentDungeonId stores the progressId now
-            await DungeonService.AbandonDungeonAsync(merc.CurrentDungeonId);
-            await GameState.LoadGameStateAsync();
+            IsLoading = true;
+            try
+            {
+                // CurrentDungeonId stores the progressId now
+                await DungeonService.AbandonDungeonAsync(merc.CurrentDungeonId);
+                await GameState.LoadGameStateAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error abandoning dungeon {merc.CurrentDungeonId}: {ex.Message}");
+            }
+            finally
+            {
+                IsLoading = false;
+            }
         }
     }
 

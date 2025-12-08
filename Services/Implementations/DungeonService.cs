@@ -58,8 +58,10 @@ public class DungeonService : IDungeonService
         // DB에 저장
         await _dynamoDB.SaveDungeonProgressAsync(progress);
         
-        mercenary.CurrentDungeonId = request.DungeonId;
+        // Track the progress id on the merc so UI and cancel operations can reference it
+        mercenary.CurrentDungeonId = progress.Id;
         mercenary.DungeonEndTime = endTime;
+        _stateService.NotifyStateChanged();
 
         // 타이머 시작
         _timerService.StartTimer(progress.Id, endTime, async () =>
@@ -87,6 +89,12 @@ public class DungeonService : IDungeonService
             return false;
 
         progress.Status = DungeonProgressStatus.Completed;
+        var merc = _stateService.Mercenaries.FirstOrDefault(m => m.Id == progress.MercenaryId);
+        if (merc != null)
+        {
+            merc.CurrentDungeonId = null;
+            merc.DungeonEndTime = null;
+        }
         var dungeon = _dungeons.FirstOrDefault(d => d.Id == progress.DungeonId);
 
         // 보상 생성 및 인벤토리에 추가
@@ -111,8 +119,15 @@ public class DungeonService : IDungeonService
             return false;
 
         progress.Status = DungeonProgressStatus.Abandoned;
+        var merc = _stateService.Mercenaries.FirstOrDefault(m => m.Id == progress.MercenaryId);
+        if (merc != null)
+        {
+            merc.CurrentDungeonId = null;
+            merc.DungeonEndTime = null;
+        }
         _timerService.StopTimer(progressId);
         await _dynamoDB.SaveDungeonProgressAsync(progress);
+        _stateService.NotifyStateChanged();
 
         return true;
     }
