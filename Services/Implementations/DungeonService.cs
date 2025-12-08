@@ -88,7 +88,8 @@ public class DungeonService : IDungeonService
     }
 
     public async Task<bool> CompleteDungeonAsync(string progressId)
-    {n        var progress = await GetDungeonProgressAsync(progressId);
+    {
+        var progress = await GetDungeonProgressAsync(progressId);
         if (progress == null)
             return false;
 
