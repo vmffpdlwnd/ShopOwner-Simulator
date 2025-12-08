@@ -9,6 +9,7 @@ public class DungeonService : IDungeonService
     private readonly IStateService _stateService;
     private readonly IDynamoDBService _dynamoDB;
     private readonly ITimerService _timerService;
+    private readonly IPlayFabService _playFabService;
 
     // Mock dungeon data
     private readonly List<Dungeon> _dungeons = new()
@@ -18,11 +19,12 @@ public class DungeonService : IDungeonService
         new Dungeon { Id = "dng_003", Name = "고대 유적", Level = 10, BaseRewardTime = 900 }
     };
 
-    public DungeonService(IStateService stateService, IDynamoDBService dynamoDB, ITimerService timerService)
+    public DungeonService(IStateService stateService, IDynamoDBService dynamoDB, ITimerService timerService, IPlayFabService playFabService)
     {
         _stateService = stateService;
         _dynamoDB = dynamoDB;
         _timerService = timerService;
+        _playFabService = playFabService;
     }
 
     public async Task<List<Dungeon>> GetAvailableDungeonsAsync()
@@ -61,6 +63,9 @@ public class DungeonService : IDungeonService
         // Track the progress id on the merc so UI and cancel operations can reference it
         mercenary.CurrentDungeonId = progress.Id;
         mercenary.DungeonEndTime = endTime;
+
+        // Persist mercenary state to PlayFab
+        await _playFabService.UpdateMercenaryAsync(mercenary);
         _stateService.NotifyStateChanged();
 
         // 타이머 시작
@@ -83,8 +88,7 @@ public class DungeonService : IDungeonService
     }
 
     public async Task<bool> CompleteDungeonAsync(string progressId)
-    {
-        var progress = await GetDungeonProgressAsync(progressId);
+    {n        var progress = await GetDungeonProgressAsync(progressId);
         if (progress == null)
             return false;
 
@@ -94,6 +98,7 @@ public class DungeonService : IDungeonService
         {
             merc.CurrentDungeonId = null;
             merc.DungeonEndTime = null;
+            await _playFabService.UpdateMercenaryAsync(merc);
         }
         var dungeon = _dungeons.FirstOrDefault(d => d.Id == progress.DungeonId);
 
@@ -107,6 +112,7 @@ public class DungeonService : IDungeonService
 
         _timerService.StopTimer(progressId);
         await _dynamoDB.SaveDungeonProgressAsync(progress);
+        await _playFabService.UpdatePlayerAsync(_stateService.CurrentPlayer); // Persist gold changes
         _stateService.NotifyStateChanged();
 
         return true;
@@ -124,6 +130,7 @@ public class DungeonService : IDungeonService
         {
             merc.CurrentDungeonId = null;
             merc.DungeonEndTime = null;
+            await _playFabService.UpdateMercenaryAsync(merc);
         }
         _timerService.StopTimer(progressId);
         await _dynamoDB.SaveDungeonProgressAsync(progress);
