@@ -289,143 +289,267 @@ public class PlayFabService : IPlayFabService
         }
     }
 
-    // Update the player's display name (what other players see). Requires auth.
-    public async Task<bool> UpdateDisplayNameAsync(string displayName)
+    public async Task<bool> IsCurrentUserAdminAsync()
     {
-        var url = $"https://{_titleId}.playfabapi.com/Client/UpdateUserTitleDisplayName";
-        var payload = new
-        {
-            DisplayName = displayName
-        };
-
         try
         {
-            await PostAsync<object>(url, payload, true);
-            return true;
+            var result = await ExecuteCloudScriptAsync<CloudScriptAdminStatusResult>("GetPlayerAdminStatus", null);
+            return result?.IsAdmin ?? false;
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"DisplayName update failed: {ex.Message}");
+            Console.Error.WriteLine($"Error checking admin status: {ex.Message}");
             return false;
         }
     }
 
-    private Player CreateDefaultPlayer(string playerId)
-    {
-        return new Player
+        // Update the player's display name (what other players see). Requires auth.
+        public async Task<bool> UpdateDisplayNameAsync(string displayName)
         {
-            Id = playerId,
-            Username = "플레이어",
-            Level = 1,
-            Experience = 0,
-            Gold = 10000,
-            Crystal = 0,
-            CreatedAt = DateTime.UtcNow,
-            LastLoginAt = DateTime.UtcNow
-        };
-    }
-
-    private async Task<T> PostAsync<T>(string url, object payload, bool requireAuth)
-    {
-        var content = new StringContent(
-            JsonSerializer.Serialize(payload),
-            Encoding.UTF8,
-            "application/json");
-
-        _httpClient.DefaultRequestHeaders.Remove("X-Authorization");
-        
-        if (requireAuth && !string.IsNullOrEmpty(_sessionTicket))
-        {
-            _httpClient.DefaultRequestHeaders.Add("X-Authorization", _sessionTicket);
-        }
-
-        var response = await _httpClient.PostAsync(url, content);
-        var jsonResponse = await response.Content.ReadAsStringAsync();
-
-        if (!response.IsSuccessStatusCode)
-        {
-            Console.Error.WriteLine($"PlayFab API 에러: {jsonResponse}");
-
-            // Try to parse PlayFab error payload into a structured object
+            var url = $"https://{_titleId}.playfabapi.com/Client/UpdateUserTitleDisplayName";
+            var payload = new
+            {
+                DisplayName = displayName
+            };
+    
             try
             {
-                var error = JsonSerializer.Deserialize<PlayFabError>(jsonResponse, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
-
-                if (error != null)
-                {
-                    throw new PlayFabApiException(error);
-                }
+                await PostAsync<object>(url, payload, true);
+                return true;
             }
-            catch
+            catch (Exception ex)
             {
-                // If parsing fails, fall back to raw message
+                Console.Error.WriteLine($"DisplayName update failed: {ex.Message}");
+                return false;
             }
-
-            throw new Exception(jsonResponse);
         }
-
-        var result = JsonSerializer.Deserialize<PlayFabResponse<T>>(jsonResponse, new JsonSerializerOptions
+    
+        public async Task<List<AdminPlayerInfo>> SearchPlayersAsync(string searchTerm)
         {
-            PropertyNameCaseInsensitive = true
-        });
-
-        return result.data;
-    }
-
-    private class PlayFabResponse<T>
-    {
-        public int code { get; set; }
-        public string status { get; set; }
-        public T data { get; set; }
-    }
-
-    private class LoginResult
-    {
-        public string PlayFabId { get; set; }
-        public string SessionTicket { get; set; }
-    }
-
-    private class UserDataResponse
-    {
-        public Dictionary<string, UserDataRecord> Data { get; set; }
-    }
-
-    private class UserDataRecord
-    {
-        public string Value { get; set; }
-    }
-
-    private class PlayFabError
-    {
-        public int Code { get; set; }
-        public string Status { get; set; }
-        public string Error { get; set; }
-        public int ErrorCode { get; set; }
-        public string ErrorMessage { get; set; }
-        public Dictionary<string, string[]> ErrorDetails { get; set; }
-    }
-
-    private class PlayFabApiException : Exception
-    {
-        public string Status { get; }
-        public string Error { get; }
-        public int ErrorCode { get; }
-        public string PlayFabMessage { get; }
-        public Dictionary<string, string[]> ErrorDetails { get; }
-
-        public PlayFabApiException(PlayFabError error)
-            : base(error?.ErrorMessage ?? "PlayFab API error")
-        {
-            if (error == null) return;
-
-            Status = error.Status;
-            Error = error.Error;
-            ErrorCode = error.ErrorCode;
-            PlayFabMessage = error.ErrorMessage;
-            ErrorDetails = error.ErrorDetails;
+            try
+            {
+                var result = await ExecuteCloudScriptAsync<SearchPlayersResult>("SearchPlayers", new SearchPlayersRequest { SearchTerm = searchTerm });
+                return result?.Players ?? new List<AdminPlayerInfo>();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error searching players: {ex.Message}");
+                throw;
+            }
         }
-    }
-}
+    
+        public async Task DeletePlayerAsync(string playFabId)
+        {
+            try
+            {
+                await ExecuteCloudScriptAsync<object>("DeletePlayer", new PlayerIdRequest { PlayFabId = playFabId });
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error deleting player {playFabId}: {ex.Message}");
+                throw;
+            }
+        }
+    
+        public async Task ResetPlayerAsync(string playFabId)
+        {
+            try
+            {
+                await ExecuteCloudScriptAsync<object>("ResetPlayer", new PlayerIdRequest { PlayFabId = playFabId });
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error resetting player {playFabId}: {ex.Message}");
+                throw;
+            }
+        }
+    
+        private async Task<T> ExecuteCloudScriptAsync<T>(string functionName, object functionParameters)
+        {
+            var url = $"https://{_titleId}.playfabapi.com/Client/ExecuteCloudScript";
+            var payload = new ExecuteCloudScriptRequest
+            {
+                FunctionName = functionName,
+                FunctionParameter = functionParameters,
+                GeneratePlayStreamEvent = true
+            };
+    
+            try
+            {
+                var response = await PostAsync<ExecuteCloudScriptResult>(url, payload, true);
+                if (response?.FunctionResult != null)
+                {
+                    // PlayFab returns FunctionResult as a JSON string, so we need to deserialize it again
+                    return JsonSerializer.Deserialize<T>(response.FunctionResult.ToString(), new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                }
+                return default(T);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"CloudScript function '{functionName}' execution failed: {ex.Message}", ex);
+            }
+        }
+    
+        private Player CreateDefaultPlayer(string playerId)
+        {
+            return new Player
+            {
+                Id = playerId,
+                Username = "플레이어",
+                Level = 1,
+                Experience = 0,
+                Gold = 10000,
+                Crystal = 0,
+                CreatedAt = DateTime.UtcNow,
+                LastLoginAt = DateTime.UtcNow
+            };
+        }
+    
+        private async Task<T> PostAsync<T>(string url, object payload, bool requireAuth)
+        {
+            var content = new StringContent(
+                JsonSerializer.Serialize(payload),
+                Encoding.UTF8,
+                "application/json");
+    
+            _httpClient.DefaultRequestHeaders.Remove("X-Authorization");
+            
+            if (requireAuth && !string.IsNullOrEmpty(_sessionTicket))
+            {
+                _httpClient.DefaultRequestHeaders.Add("X-Authorization", _sessionTicket);
+            }
+    
+            var response = await _httpClient.PostAsync(url, content);
+            var jsonResponse = await response.Content.ReadAsStringAsync();
+    
+            if (!response.IsSuccessStatusCode)
+            {
+                Console.Error.WriteLine($"PlayFab API 에러: {jsonResponse}");
+    
+                // Try to parse PlayFab error payload into a structured object
+                try
+                {
+                    var error = JsonSerializer.Deserialize<PlayFabError>(jsonResponse, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+    
+                    if (error != null)
+                    {
+                        throw new PlayFabApiException(error);
+                    }
+                }
+                catch
+                {
+                    // If parsing fails, fall back to raw message
+                }
+    
+                throw new Exception(jsonResponse);
+            }
+    
+            var result = JsonSerializer.Deserialize<PlayFabResponse<T>>(jsonResponse, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+    
+            return result.data;
+        }
+    
+        private class PlayFabResponse<T>
+        {
+            public int code { get; set; }
+            public string status { get; set; }
+            public T data { get; set; }
+        }
+    
+        private class LoginResult
+        {
+            public string PlayFabId { get; set; }
+            public string SessionTicket { get; set; }
+        }
+    
+        private class UserDataResponse
+        {
+            public Dictionary<string, UserDataRecord> Data { get; set; }
+        }
+    
+        private class UserDataRecord
+        {
+            public string Value { get; set; }
+        }
+    
+        private class PlayFabError
+        {
+            public int Code { get; set; }
+            public string Status { get; set; }
+            public string Error { get; set; }
+            public int ErrorCode { get; set; }
+            public string ErrorMessage { get; set; }
+            public Dictionary<string, string[]> ErrorDetails { get; set; }
+        }
+    
+        private class PlayFabApiException : Exception
+        {
+            public string Status { get; }
+            public string Error { get; }
+            public int ErrorCode { get; }
+            public string PlayFabMessage { get; }
+            public Dictionary<string, string[]> ErrorDetails { get; }
+    
+            public PlayFabApiException(PlayFabError error)
+                : base(error?.ErrorMessage ?? "PlayFab API error")
+            {
+                if (error == null) return;
+    
+                Status = error.Status;
+                Error = error.Error;
+                ErrorCode = error.ErrorCode;
+                PlayFabMessage = error.ErrorMessage;
+                ErrorDetails = error.ErrorDetails;
+            }
+        }
+    
+        // New DTOs for CloudScript execution
+        private class ExecuteCloudScriptRequest
+        {
+            public string FunctionName { get; set; }
+            public object FunctionParameter { get; set; }
+            public bool GeneratePlayStreamEvent { get; set; }
+        }
+    
+        private class ExecuteCloudScriptResult
+        {
+            public string FunctionName { get; set; }
+            public object FunctionResult { get; set; } // Can be any JSON object/string
+            public PlayStreamEvent[] Logs { get; set; }
+        }
+    
+        private class PlayStreamEvent
+        {
+            public string EventName { get; set; }
+            public object Body { get; set; }
+            public string Timestamp { get; set; }
+        }
+    
+        private class CloudScriptAdminStatusResult
+        {
+            public bool IsAdmin { get; set; }
+        }
+    
+        private class SearchPlayersRequest
+        {
+            public string SearchTerm { get; set; }
+        }
+    
+        private class SearchPlayersResult
+        {
+            public List<AdminPlayerInfo> Players { get; set; }
+        }
+    
+        private class PlayerIdRequest
+        {
+            public string PlayFabId { get; set; }
+        }}

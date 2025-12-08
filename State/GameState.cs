@@ -8,6 +8,7 @@ public class GameState
 {
     private readonly IGameService _gameService;
     private readonly IStateService _stateService;
+    private readonly IPlayFabService _playFabService;
 
     public event Action? OnStateChanged;
 
@@ -17,11 +18,13 @@ public class GameState
         public List<Transaction> Transactions { get; private set; } = new();
     public bool IsLoading { get; private set; } = false;
     public bool IsInitialized { get; private set; } = false;
+    public bool IsAdmin { get; private set; } = false;
 
-    public GameState(IGameService gameService, IStateService stateService)
+    public GameState(IGameService gameService, IStateService stateService, IPlayFabService playFabService)
     {
         _gameService = gameService;
         _stateService = stateService;
+        _playFabService = playFabService;
         _stateService.OnStateChanged += StateServiceChanged;
     }
 
@@ -37,11 +40,13 @@ public class GameState
             await _gameService.InitializeGameAsync(playerId);
             
             await LoadGameStateAsync();
+            IsAdmin = await _playFabService.IsCurrentUserAdminAsync();
             IsInitialized = true;
         }
         finally
         {
             IsLoading = false;
+            NotifyStateChanged();
         }
     }
 
@@ -56,12 +61,20 @@ public class GameState
         {
             await _gameService.InitializeGameAsync(playerId);
             await LoadGameStateAsync();
+            IsAdmin = await _playFabService.IsCurrentUserAdminAsync();
             IsInitialized = true;
         }
         finally
         {
             IsLoading = false;
+            NotifyStateChanged();
         }
+    }
+
+    public void SetAdminStatus(bool isAdmin)
+    {
+        IsAdmin = isAdmin;
+        NotifyStateChanged();
     }
 
     public async Task LoadGameStateAsync()
@@ -117,6 +130,7 @@ public class GameState
             Transactions = new List<Transaction>();
 
             IsInitialized = false;
+            IsAdmin = false; // Also reset admin status on logout
             NotifyStateChanged();
         }
         finally
@@ -240,11 +254,13 @@ public class GameState
 
             // Reflect into GameState properties
             await LoadGameStateAsync();
+            IsAdmin = await _playFabService.IsCurrentUserAdminAsync();
             IsInitialized = true;
         }
         finally
         {
             IsLoading = false;
+            NotifyStateChanged();
         }
     }
 }

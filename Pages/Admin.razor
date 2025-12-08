@@ -1,0 +1,138 @@
+@page "/admin"
+@inject GameState GameState
+@inject NavigationManager NavManager
+@inject IPlayFabService PlayFabService
+@inject IJSRuntime JS
+
+<h3>관리자 패널</h3>
+
+@if (!GameState.IsInitialized || !GameState.IsAdmin)
+{
+    <p>관리자만 접근할 수 있습니다. <a href="/">대시보드</a>로 돌아가십시오.</p>
+}
+else
+{
+    <div class="admin-panel-content">
+        <h4>플레이어 관리</h4>
+        <div class="search-section">
+            <input type="text" @bind="searchQuery" placeholder="플레이어 ID 또는 사용자 이름 검색" />
+            <button @onclick="SearchPlayers">검색</button>
+        </div>
+
+        @if (isSearching)
+        {
+            <p>검색 중...</p>
+        }
+        else if (searchResults.Any())
+        {
+            <div class="player-results">
+                <h5>검색 결과:</h5>
+                <ul>
+                    @foreach (var player in searchResults)
+                    {
+                        <li>
+                            <span>ID: @player.PlayFabId, 이름: @player.Username</span>
+                            <button @onclick="() => DeletePlayer(player.PlayFabId)">삭제</button>
+                            <button @onclick="() => ResetPlayer(player.PlayFabId)">초기화</button>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+        else if (searchAttempted)
+        {
+            <p>검색 결과가 없습니다.</p>
+        }
+    </div>
+}
+
+@implements IDisposable
+@code {
+    private string searchQuery = "";
+    private List<AdminPlayerInfo> searchResults = new();
+    private bool isSearching = false;
+    private bool searchAttempted = false;
+
+    protected override void OnInitialized()
+    {
+        GameState.OnStateChanged += StateHasChanged;
+        CheckAdminAccess();
+    }
+
+    protected override void OnParametersSet()
+    {
+        CheckAdminAccess();
+    }
+
+    private void CheckAdminAccess()
+    {
+        if (GameState.IsInitialized && !GameState.IsAdmin)
+        {
+            NavManager.NavigateTo("/", true); // Redirect if not admin
+        }
+    }
+
+    private async Task SearchPlayers()
+    {
+        isSearching = true;
+        searchAttempted = true;
+        searchResults.Clear();
+
+        try
+        {
+            searchResults = (await PlayFabService.SearchPlayersAsync(searchQuery)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error searching players: {ex.Message}");
+        }
+        finally
+        {
+            isSearching = false;
+        }
+    }
+
+    private async Task DeletePlayer(string playFabId)
+    {
+        if (await DisplayConfirm($"정말로 플레이어 ID '{playFabId}'를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."))
+        {
+            try
+            {
+                await PlayFabService.DeletePlayerAsync(playFabId);
+                Console.WriteLine($"플레이어 {playFabId} 삭제됨");
+                await SearchPlayers(); // Refresh search results after deletion
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error deleting player {playFabId}: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task ResetPlayer(string playFabId)
+    {
+        if (await DisplayConfirm($"정말로 플레이어 ID '{playFabId}'를 초기화하시겠습니까?"))
+        {
+            try
+            {
+                await PlayFabService.ResetPlayerAsync(playFabId);
+                Console.WriteLine($"플레이어 {playFabId} 초기화됨");
+                await SearchPlayers(); // Refresh search results after reset
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error resetting player {playFabId}: {ex.Message}");
+            }
+        }
+    }
+
+    // Simple confirmation dialog (replace with a proper Blazor modal if available)
+    private async Task<bool> DisplayConfirm(string message)
+    {
+        return await JS.InvokeAsync<bool>("confirm", message);
+    }
+
+    public void Dispose()
+    {
+        GameState.OnStateChanged -= StateHasChanged;
+    }

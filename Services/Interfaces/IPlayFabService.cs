@@ -16,4 +16,14 @@ public interface IPlayFabService
     Task<bool> UpdateMercenaryAsync(Mercenary mercenary);
     Task<List<InventoryItem>> GetInventoryAsync(string playerId);
     Task<bool> UpdateInventoryAsync(string playerId, InventoryItem item);
+    Task<bool> IsCurrentUserAdminAsync();
+    Task<List<AdminPlayerInfo>> SearchPlayersAsync(string searchTerm);
+    Task DeletePlayerAsync(string playFabId);
+    Task ResetPlayerAsync(string playFabId);
+}
+
+public class AdminPlayerInfo
+{
+    public string PlayFabId { get; set; }
+    public string Username { get; set; }
 }

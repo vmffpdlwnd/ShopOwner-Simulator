@@ -53,11 +53,20 @@
             </NavLink>
         </li>
         <li class="nav-item">
-                <NavLink href="/general-shop" Match="NavLinkMatch.Prefix">
+            <NavLink href="/general-shop" Match="NavLinkMatch.Prefix">
                 <span class="icon">🏪</span>
                 <span class="label">상점</span>
             </NavLink>
         </li>
+        @if (GameState != null && GameState.IsInitialized && GameState.IsAdmin)
+        {
+            <li class="nav-item">
+                <NavLink href="/admin" Match="NavLinkMatch.Prefix">
+                    <span class="icon">⚙️</span>
+                    <span class="label">관리자</span>
+                </NavLink>
+            </li>
+        }
         <li class="nav-item">
             @if (GameState != null && GameState.IsInitialized)
             {
@@ -145,7 +154,19 @@
     }
 </style>
 
+@implements IDisposable
+
 @code {
+    protected override void OnInitialized()
+    {
+        GameState.OnStateChanged += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        GameState.OnStateChanged -= StateHasChanged;
+    }
+
     private async Task Logout()
     {
         try

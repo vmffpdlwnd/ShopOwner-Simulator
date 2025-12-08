@@ -50,7 +50,12 @@ builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<IPersonalShopService, PersonalShopService>();
 
 // Global State
-builder.Services.AddScoped<GameState>();
+builder.Services.AddScoped<GameState>(sp =>
+    new GameState(
+        sp.GetRequiredService<IGameService>(),
+        sp.GetRequiredService<IStateService>(),
+        sp.GetRequiredService<IPlayFabService>()
+    ));
 builder.Services.AddScoped<InventoryState>();
 builder.Services.AddScoped<MercenaryState>();
 builder.Services.AddScoped<TimerState>();
