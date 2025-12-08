@@ -32,36 +32,65 @@ public class InventoryService : IInventoryService
 
     public async Task<bool> AddItemAsync(string playerId, string itemTemplateId, int quantity)
     {
-        // Check if item already exists in inventory
-        var existingItem = _stateService.Inventory.FirstOrDefault(i =>
-            i.PlayerId == playerId && i.ItemTemplateId == itemTemplateId);
+        var isMaterial = itemTemplateId.StartsWith("material_", StringComparison.OrdinalIgnoreCase);
+        var itemsToUpdate = new List<InventoryItem>();
 
-        if (existingItem != null)
+        if (isMaterial)
         {
-            Console.Error.WriteLine($"InventoryService.AddItemAsync: Found existing item Id={existingItem.Id}, Template={existingItem.ItemTemplateId}, QtyBefore={existingItem.Quantity}, Add={quantity}");
-            existingItem.Quantity += quantity;
-            Console.Error.WriteLine($"InventoryService.AddItemAsync: Updated QtyAfter={existingItem.Quantity}");
+            var existing = _stateService.Inventory.FirstOrDefault(i =>
+                i.PlayerId == playerId && i.ItemTemplateId == itemTemplateId);
+
+            if (existing != null)
+            {
+                Console.Error.WriteLine($"InventoryService.AddItemAsync: Stacking material Id={existing.Id}, Template={existing.ItemTemplateId}, QtyBefore={existing.Quantity}, Add={quantity}");
+                existing.Quantity += quantity;
+                itemsToUpdate.Add(existing);
+                await _storage.SetAsync($"inventory_item_{existing.Id}", existing);
+            }
+            else
+            {
+                var newItem = new InventoryItem
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    PlayerId = playerId,
+                    ItemTemplateId = itemTemplateId,
+                    Quantity = quantity,
+                    IsEquipped = false,
+                    EquippedMercenaryId = null
+                };
+
+                _stateService.Inventory.Add(newItem);
+                itemsToUpdate.Add(newItem);
+                await _storage.SetAsync($"inventory_item_{newItem.Id}", newItem);
+                Console.Error.WriteLine($"InventoryService.AddItemAsync: Added new material item Id={newItem.Id}, Template={newItem.ItemTemplateId}, Quantity={newItem.Quantity}");
+            }
         }
         else
         {
-            var newItem = new InventoryItem
+            for (int i = 0; i < quantity; i++)
             {
-                Id = Guid.NewGuid().ToString(),
-                PlayerId = playerId,
-                ItemTemplateId = itemTemplateId,
-                Quantity = quantity,
-                IsEquipped = false,
-                EquippedMercenaryId = null
-            };
+                var newItem = new InventoryItem
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    PlayerId = playerId,
+                    ItemTemplateId = itemTemplateId,
+                    Quantity = 1,
+                    IsEquipped = false,
+                    EquippedMercenaryId = null
+                };
 
-            _stateService.Inventory.Add(newItem);
-            await _storage.SetAsync($"inventory_item_{newItem.Id}", newItem);
-            Console.Error.WriteLine($"InventoryService.AddItemAsync: Added newItem Id={newItem.Id}, Template={newItem.ItemTemplateId}, Quantity={newItem.Quantity}");
+                _stateService.Inventory.Add(newItem);
+                itemsToUpdate.Add(newItem);
+                await _storage.SetAsync($"inventory_item_{newItem.Id}", newItem);
+                Console.Error.WriteLine($"InventoryService.AddItemAsync: Added equipment item Id={newItem.Id}, Template={newItem.ItemTemplateId}, Quantity={newItem.Quantity}");
+            }
         }
 
-        var toUpdate = existingItem ?? _stateService.Inventory.First(i => i.ItemTemplateId == itemTemplateId && i.PlayerId == playerId);
-        Console.Error.WriteLine($"InventoryService.AddItemAsync: Updating PlayFab inventory for player={playerId}, itemId={toUpdate.Id}, template={toUpdate.ItemTemplateId}, qty={toUpdate.Quantity}");
-        await _playFab.UpdateInventoryAsync(playerId, toUpdate);
+        foreach (var item in itemsToUpdate)
+        {
+            Console.Error.WriteLine($"InventoryService.AddItemAsync: Updating PlayFab inventory for player={playerId}, itemId={item.Id}, template={item.ItemTemplateId}, qty={item.Quantity}");
+            await _playFab.UpdateInventoryAsync(playerId, item);
+        }
 
         _stateService.NotifyStateChanged();
         return true;

@@ -9,4 +9,6 @@ public class InventoryItem
     public int Quantity { get; set; }
     public bool IsEquipped { get; set; }
     public string EquippedMercenaryId { get; set; }
+
+    public bool IsStackable => ItemTemplateId.StartsWith("material_");
 }
