@@ -293,12 +293,25 @@ public class PlayFabService : IPlayFabService
     {
         try
         {
+            Console.WriteLine("=== Admin Status Check Start ===");
+            Console.WriteLine($"Session Ticket: {(_sessionTicket != null ? "EXISTS" : "NULL")}");
+            
             var result = await ExecuteCloudScriptAsync<CloudScriptAdminStatusResult>("GetPlayerAdminStatus", null);
+            
+            Console.WriteLine($"Cloud Script Result: {(result != null ? "SUCCESS" : "NULL")}");
+            Console.WriteLine($"IsAdmin Value: {result?.IsAdmin}");
+            Console.WriteLine("=== Admin Status Check End ===");
+            
             return result?.IsAdmin ?? false;
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Error checking admin status: {ex.Message}");
+            Console.Error.WriteLine($"!!! Error checking admin status: {ex.Message}");
+            Console.Error.WriteLine($"!!! Stack Trace: {ex.StackTrace}");
+            if (ex.InnerException != null)
+            {
+                Console.Error.WriteLine($"!!! Inner Exception: {ex.InnerException.Message}");
+            }
             return false;
         }
     }
@@ -376,19 +389,31 @@ public class PlayFabService : IPlayFabService
     
             try
             {
+                Console.WriteLine($">>> Executing CloudScript: {functionName}");
+                Console.WriteLine($">>> Parameters: {JsonSerializer.Serialize(functionParameters)}");
+                
                 var response = await PostAsync<ExecuteCloudScriptResult>(url, payload, true);
+                
+                Console.WriteLine($">>> Response received: {(response != null ? "SUCCESS" : "NULL")}");
+                Console.WriteLine($">>> Function Result: {response?.FunctionResult}");
+                Console.WriteLine($">>> Logs: {JsonSerializer.Serialize(response?.Logs)}");
+                Console.WriteLine($">>> Error: {response?.Error}");
+                
                 if (response?.FunctionResult != null)
                 {
                     // PlayFab returns FunctionResult as a JSON string, so we need to deserialize it again
-                    return JsonSerializer.Deserialize<T>(response.FunctionResult.ToString(), new JsonSerializerOptions
+                    var result = JsonSerializer.Deserialize<T>(response.FunctionResult.ToString(), new JsonSerializerOptions
                     {
                         PropertyNameCaseInsensitive = true
                     });
+                    Console.WriteLine($">>> Deserialized Result: {JsonSerializer.Serialize(result)}");
+                    return result;
                 }
                 return default(T);
             }
             catch (Exception ex)
             {
+                Console.Error.WriteLine($"!!! CloudScript function '{functionName}' execution failed: {ex.Message}");
                 throw new Exception($"CloudScript function '{functionName}' execution failed: {ex.Message}", ex);
             }
         }
