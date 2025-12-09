@@ -397,7 +397,6 @@ public class PlayFabService : IPlayFabService
                 Console.WriteLine($">>> Response received: {(response != null ? "SUCCESS" : "NULL")}");
                 Console.WriteLine($">>> Function Result: {response?.FunctionResult}");
                 Console.WriteLine($">>> Logs: {JsonSerializer.Serialize(response?.Logs)}");
-                Console.WriteLine($">>> Error: {response?.Error}");
                 
                 if (response?.FunctionResult != null)
                 {
