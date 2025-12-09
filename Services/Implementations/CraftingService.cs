@@ -9,48 +9,38 @@ public class CraftingService : ICraftingService
     private readonly IStateService _stateService;
     private readonly IStorageService _storage;
     private readonly IInventoryService _inventoryService;
-
-    private readonly List<Recipe> _recipes = new()
-    {
-        new Recipe
-        {
-            Id = "rec_001",
-            Name = "Iron Sword",
-            RequiredItems = new() { { "material_ore", 5 } },
-            OutputItem = "equipment_sword",
-            OutputQuantity = 1
-        },
-        new Recipe
-        {
-            Id = "rec_002",
-            Name = "Leather Armor",
-            RequiredItems = new() { { "material_wood", 3 }, { "material_ore", 2 } },
-            OutputItem = "equipment_armor",
-            OutputQuantity = 1
-        },
-        new Recipe
-        {
-            Id = "rec_003",
-            Name = "Health Potion",
-            RequiredItems = new() { { "material_herb", 2 } },
-            OutputItem = "consumable_potion",
-            OutputQuantity = 5
-        }
-    };
+    private readonly IDynamoDBService _dynamoDB;
 
     public CraftingService(
         IStateService stateService,
         IStorageService storage,
-        IInventoryService inventoryService)
+        IInventoryService inventoryService,
+        IDynamoDBService dynamoDB)
     {
         _stateService = stateService;
         _storage = storage;
         _inventoryService = inventoryService;
+        _dynamoDB = dynamoDB;
     }
 
     public async Task<List<Recipe>> GetRecipesAsync()
     {
-        return await Task.FromResult(_recipes);
+        var dbRecipes = await _dynamoDB.GetAllRecipesAsync();
+        var recipes = new List<Recipe>();
+
+        foreach (dynamic r in dbRecipes)
+        {
+            recipes.Add(new Recipe
+            {
+                Id = r.Id,
+                Name = r.Name,
+                RequiredItems = r.RequiredItems,
+                OutputItem = r.OutputItem,
+                OutputQuantity = r.OutputQuantity
+            });
+        }
+
+        return recipes;
     }
 
     public async Task<CraftingResponse> CraftAsync(CraftingRequest request)
@@ -58,7 +48,24 @@ public class CraftingService : ICraftingService
         if (!await CanCraftAsync(request))
             throw new Exception("Cannot craft: insufficient materials");
 
-        var recipe = _recipes.FirstOrDefault(r => r.Id == request.RecipeId);
+        var dbRecipes = await _dynamoDB.GetAllRecipesAsync();
+        Recipe recipe = null;
+        foreach (dynamic r in dbRecipes)
+        {
+            if (r.Id == request.RecipeId)
+            {
+                recipe = new Recipe
+                {
+                    Id = r.Id,
+                    Name = r.Name,
+                    RequiredItems = r.RequiredItems,
+                    OutputItem = r.OutputItem,
+                    OutputQuantity = r.OutputQuantity
+                };
+                break;
+            }
+        }
+        
         if (recipe == null)
             throw new Exception("Recipe not found");
 
@@ -96,8 +103,24 @@ public class CraftingService : ICraftingService
 
     public async Task<bool> CanCraftAsync(CraftingRequest request)
     {
-        await Task.CompletedTask;
-        var recipe = _recipes.FirstOrDefault(r => r.Id == request.RecipeId);
+        var dbRecipes = await _dynamoDB.GetAllRecipesAsync();
+        Recipe recipe = null;
+        foreach (dynamic r in dbRecipes)
+        {
+            if (r.Id == request.RecipeId)
+            {
+                recipe = new Recipe
+                {
+                    Id = r.Id,
+                    Name = r.Name,
+                    RequiredItems = r.RequiredItems,
+                    OutputItem = r.OutputItem,
+                    OutputQuantity = r.OutputQuantity
+                };
+                break;
+            }
+        }
+        
         if (recipe == null)
             return false;
 
@@ -113,8 +136,23 @@ public class CraftingService : ICraftingService
 
     public async Task<Recipe> GetRecipeAsync(string recipeId)
     {
-        await Task.CompletedTask;
-        return _recipes.FirstOrDefault(r => r.Id == recipeId)!;
+        var dbRecipes = await _dynamoDB.GetAllRecipesAsync();
+        foreach (dynamic r in dbRecipes)
+        {
+            if (r.Id == recipeId)
+            {
+                return new Recipe
+                {
+                    Id = r.Id,
+                    Name = r.Name,
+                    RequiredItems = r.RequiredItems,
+                    OutputItem = r.OutputItem,
+                    OutputQuantity = r.OutputQuantity
+                };
+            }
+        }
+        
+        return null!;
     }
 }
 

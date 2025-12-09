@@ -538,4 +538,218 @@ public class DynamoDBService : IDynamoDBService
             return false;
         }
     }
+
+    // Master Data
+    public async Task<List<ItemTemplate>> GetAllItemTemplatesAsync()
+    {
+        try
+        {
+            var request = new ScanRequest
+            {
+                TableName = "ItemTemplates"
+            };
+
+            var response = await _client.ScanAsync(request);
+            var templates = new List<ItemTemplate>();
+
+            foreach (var item in response.Items)
+            {
+                templates.Add(new ItemTemplate
+                {
+                    Id = item["ItemTemplateId"].S,
+                    Name = item["Name"].S,
+                    Type = Enum.Parse<ItemType>(item["Type"].S),
+                    Rarity = Enum.Parse<ItemRarity>(item["Rarity"].S),
+                    BasePrice = long.Parse(item["BasePrice"].N),
+                    Description = item.ContainsKey("Description") ? item["Description"].S : ""
+                });
+            }
+
+            return templates;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"ItemTemplates 조회 실패: {ex.Message}");
+            return new List<ItemTemplate>();
+        }
+    }
+
+    public async Task<ItemTemplate> GetItemTemplateAsync(string itemTemplateId)
+    {
+        try
+        {
+            var request = new GetItemRequest
+            {
+                TableName = "ItemTemplates",
+                Key = new Dictionary<string, AttributeValue>
+                {
+                    { "ItemTemplateId", new AttributeValue { S = itemTemplateId } }
+                }
+            };
+
+            var response = await _client.GetItemAsync(request);
+            if (!response.IsItemSet) return null;
+
+            return new ItemTemplate
+            {
+                Id = response.Item["ItemTemplateId"].S,
+                Name = response.Item["Name"].S,
+                Type = Enum.Parse<ItemType>(response.Item["Type"].S),
+                Rarity = Enum.Parse<ItemRarity>(response.Item["Rarity"].S),
+                BasePrice = long.Parse(response.Item["BasePrice"].N),
+                Description = response.Item.ContainsKey("Description") ? response.Item["Description"].S : ""
+            };
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"ItemTemplate 조회 실패: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<List<dynamic>> GetAllRecipesAsync()
+    {
+        try
+        {
+            var request = new ScanRequest
+            {
+                TableName = "Recipes"
+            };
+
+            var response = await _client.ScanAsync(request);
+            var recipes = new List<dynamic>();
+
+            foreach (var item in response.Items)
+            {
+                var requiredItems = new Dictionary<string, int>();
+                if (item.ContainsKey("RequiredItems") && item["RequiredItems"].M != null)
+                {
+                    foreach (var req in item["RequiredItems"].M)
+                    {
+                        requiredItems[req.Key] = int.Parse(req.Value.N);
+                    }
+                }
+
+                recipes.Add(new
+                {
+                    Id = item["RecipeId"].S,
+                    Name = item["Name"].S,
+                    OutputItem = item["OutputItem"].S,
+                    OutputQuantity = int.Parse(item["OutputQuantity"].N),
+                    RequiredItems = requiredItems
+                });
+            }
+
+            return recipes;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Recipes 조회 실패: {ex.Message}");
+            return new List<dynamic>();
+        }
+    }
+
+    public async Task<dynamic> GetRecipeAsync(string recipeId)
+    {
+        try
+        {
+            var request = new GetItemRequest
+            {
+                TableName = "Recipes",
+                Key = new Dictionary<string, AttributeValue>
+                {
+                    { "RecipeId", new AttributeValue { S = recipeId } }
+                }
+            };
+
+            var response = await _client.GetItemAsync(request);
+            if (!response.IsItemSet) return null;
+
+            var requiredItems = new Dictionary<string, int>();
+            if (response.Item.ContainsKey("RequiredItems") && response.Item["RequiredItems"].M != null)
+            {
+                foreach (var req in response.Item["RequiredItems"].M)
+                {
+                    requiredItems[req.Key] = int.Parse(req.Value.N);
+                }
+            }
+
+            return new
+            {
+                Id = response.Item["RecipeId"].S,
+                Name = response.Item["Name"].S,
+                OutputItem = response.Item["OutputItem"].S,
+                OutputQuantity = int.Parse(response.Item["OutputQuantity"].N),
+                RequiredItems = requiredItems
+            };
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Recipe 조회 실패: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<List<dynamic>> GetAllDungeonsAsync()
+    {
+        try
+        {
+            var request = new ScanRequest
+            {
+                TableName = "Dungeons"
+            };
+
+            var response = await _client.ScanAsync(request);
+            var dungeons = new List<dynamic>();
+
+            foreach (var item in response.Items)
+            {
+                dungeons.Add(new
+                {
+                    Id = item["DungeonId"].S,
+                    Name = item["Name"].S,
+                    Level = int.Parse(item["Level"].N),
+                    BaseRewardTime = int.Parse(item["BaseRewardTime"].N)
+                });
+            }
+
+            return dungeons;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Dungeons 조회 실패: {ex.Message}");
+            return new List<dynamic>();
+        }
+    }
+
+    public async Task<dynamic> GetDungeonAsync(string dungeonId)
+    {
+        try
+        {
+            var request = new GetItemRequest
+            {
+                TableName = "Dungeons",
+                Key = new Dictionary<string, AttributeValue>
+                {
+                    { "DungeonId", new AttributeValue { S = dungeonId } }
+                }
+            };
+
+            var response = await _client.GetItemAsync(request);
+            if (!response.IsItemSet) return null;
+
+            return new
+            {
+                Id = response.Item["DungeonId"].S,
+                Name = response.Item["Name"].S,
+                Level = int.Parse(response.Item["Level"].N),
+                BaseRewardTime = int.Parse(response.Item["BaseRewardTime"].N)
+            };
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Dungeon 조회 실패: {ex.Message}");
+            return null;
+        }
+    }
 }

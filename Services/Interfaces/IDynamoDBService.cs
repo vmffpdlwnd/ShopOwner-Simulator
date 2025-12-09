@@ -26,4 +26,12 @@ public interface IDynamoDBService
     Task<DungeonProgress> GetDungeonProgressAsync(string progressId);
     Task<List<DungeonProgress>> GetMercenaryProgressAsync(string mercenaryId);
     Task<bool> DeleteDungeonProgressAsync(string progressId);
+
+    // Master Data
+    Task<List<ItemTemplate>> GetAllItemTemplatesAsync();
+    Task<ItemTemplate> GetItemTemplateAsync(string itemTemplateId);
+    Task<List<dynamic>> GetAllRecipesAsync();
+    Task<dynamic> GetRecipeAsync(string recipeId);
+    Task<List<dynamic>> GetAllDungeonsAsync();
+    Task<dynamic> GetDungeonAsync(string dungeonId);
 }

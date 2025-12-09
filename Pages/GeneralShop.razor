@@ -1,7 +1,9 @@
 @page "/general-shop"
 @implements IAsyncDisposable
 @using ShopOwnerSimulator.State
+@using ShopOwnerSimulator.Services.Implementations
 @inject GameState GameState
+@inject IDynamoDBService DynamoDB
 
 <PageTitle>상점 - 상점주인 시뮬레이터</PageTitle>
 
@@ -202,20 +204,31 @@
     protected override async Task OnInitializedAsync()
     {
         GameState.OnStateChanged += StateHasChanged;
+        await LoadMaterialsAsync();
         await base.OnInitializedAsync();
     }
 
+    private List<MaterialDisplay> _materials = new();
+
     private List<MaterialDisplay> GetAvailableMaterials()
     {
-        return new()
-        {
-            new MaterialDisplay { Name = "철광석", Description = "제작에 필수적인 재료", Price = 100, PriceChange = 5 },
-            new MaterialDisplay { Name = "목재", Description = "다양한 제작에 사용되는 목재", Price = 80, PriceChange = -2 },
-            new MaterialDisplay { Name = "약초", Description = "물약에 사용되는 희귀 약초", Price = 150, PriceChange = 10 },
-            new MaterialDisplay { Name = "돌", Description = "건축 재료", Price = 60, PriceChange = 3 },
-            new MaterialDisplay { Name = "크리스탈", Description = "마법 크리스탈", Price = 200, PriceChange = 8 },
-            new MaterialDisplay { Name = "실", Description = "제작용 고급 실", Price = 50, PriceChange = -1 }
-        };
+        return _materials;
+    }
+
+    private async Task LoadMaterialsAsync()
+    {
+        var templates = await DynamoDB.GetAllItemTemplatesAsync();
+        _materials = templates
+            .Where(t => t.Type == ShopOwnerSimulator.Models.Entities.ItemType.Material)
+            .Select(t => new MaterialDisplay
+            {
+                Name = t.Name,
+                Description = t.Description ?? "",
+                Price = t.BasePrice,
+                PriceChange = new Random().Next(-10, 15),
+                BuyQuantity = 1
+            })
+            .ToList();
     }
 
     private void BuyMaterial(MaterialDisplay material)

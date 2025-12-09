@@ -11,14 +11,6 @@ public class DungeonService : IDungeonService
     private readonly ITimerService _timerService;
     private readonly IPlayFabService _playFabService;
 
-    // Mock dungeon data
-    private readonly List<Dungeon> _dungeons = new()
-    {
-        new Dungeon { Id = "dng_001", Name = "초급 동굴", Level = 1, BaseRewardTime = 300 },
-        new Dungeon { Id = "dng_002", Name = "어두운 숲", Level = 5, BaseRewardTime = 600 },
-        new Dungeon { Id = "dng_003", Name = "고대 유적", Level = 10, BaseRewardTime = 900 }
-    };
-
     public DungeonService(IStateService stateService, IDynamoDBService dynamoDB, ITimerService timerService, IPlayFabService playFabService)
     {
         _stateService = stateService;
@@ -29,12 +21,42 @@ public class DungeonService : IDungeonService
 
     public async Task<List<Dungeon>> GetAvailableDungeonsAsync()
     {
-        return await Task.FromResult(_dungeons);
+        var dbDungeons = await _dynamoDB.GetAllDungeonsAsync();
+        var dungeons = new List<Dungeon>();
+
+        foreach (dynamic d in dbDungeons)
+        {
+            dungeons.Add(new Dungeon
+            {
+                Id = d.Id,
+                Name = d.Name,
+                Level = d.Level,
+                BaseRewardTime = d.BaseRewardTime
+            });
+        }
+
+        return dungeons;
     }
 
     public async Task<DungeonStartResponse> StartDungeonAsync(DungeonStartRequest request)
     {
-        var dungeon = _dungeons.FirstOrDefault(d => d.Id == request.DungeonId);
+        var dbDungeons = await _dynamoDB.GetAllDungeonsAsync();
+        Dungeon dungeon = null;
+        foreach (dynamic d in dbDungeons)
+        {
+            if (d.Id == request.DungeonId)
+            {
+                dungeon = new Dungeon
+                {
+                    Id = d.Id,
+                    Name = d.Name,
+                    Level = d.Level,
+                    BaseRewardTime = d.BaseRewardTime
+                };
+                break;
+            }
+        }
+        
         if (dungeon == null)
             throw new Exception("Dungeon not found");
 
@@ -60,8 +82,7 @@ public class DungeonService : IDungeonService
         // DB에 저장
         await _dynamoDB.SaveDungeonProgressAsync(progress);
         
-        // Track the progress id on the merc so UI and cancel operations can reference it
-        mercenary.CurrentDungeonId = progress.Id;
+        mercenary.CurrentDungeonId = request.DungeonId;
         mercenary.DungeonEndTime = endTime;
 
         // Persist mercenary state to PlayFab
@@ -101,7 +122,23 @@ public class DungeonService : IDungeonService
             merc.DungeonEndTime = null;
             await _playFabService.UpdateMercenaryAsync(merc);
         }
-        var dungeon = _dungeons.FirstOrDefault(d => d.Id == progress.DungeonId);
+        
+        var dbDungeons = await _dynamoDB.GetAllDungeonsAsync();
+        Dungeon dungeon = null;
+        foreach (dynamic d in dbDungeons)
+        {
+            if (d.Id == progress.DungeonId)
+            {
+                dungeon = new Dungeon
+                {
+                    Id = d.Id,
+                    Name = d.Name,
+                    Level = d.Level,
+                    BaseRewardTime = d.BaseRewardTime
+                };
+                break;
+            }
+        }
 
         // 보상 생성 및 인벤토리에 추가
         var rewards = GenerateRewards(dungeon);
